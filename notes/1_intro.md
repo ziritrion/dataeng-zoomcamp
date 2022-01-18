@@ -40,7 +40,7 @@ Docker provides the following advantages:
 
 Docker containers are ***stateless***: any changes done inside a container will **NOT** be saved when the container is killed and started again. This is an advantage because it allows us to restore any container to its initial state in a reproducible manner, but you will have to store data elsewhere if you need to do so; a common way to do so is with _volumes_.
 
->Note: you can learn more about Docker and how to set it up on a Mac [in this link](https://github.com/ziritrion/ml-zoomcamp/blob/11_kserve/notes/05b_virtenvs.md#docker). You may also be interested in a [reference cheatsheet](https://gist.github.com/ziritrion/1842c8a4c4851602a8733bba19ab6050#docker).
+>Note: you can learn more about Docker and how to set it up on a Mac [in this link](https://github.com/ziritrion/ml-zoomcamp/blob/11_kserve/notes/05b_virtenvs.md#docker). You may also be interested in a [Docker reference cheatsheet](https://gist.github.com/ziritrion/1842c8a4c4851602a8733bba19ab6050#docker).
 
 ## Creating a custom pipeline with Docker
 
@@ -121,7 +121,7 @@ docker run -it \
     -e POSTGRES_USER="root" \
     -e POSTGRES_PASSWORD="root" \
     -e POSTGRES_DB="ny_taxi" \
-    -v $(pwd)/ny_taxi_postgres_data:/var/lib/potsgresql/data \
+    -v $(pwd)/ny_taxi_postgres_data:/var/lib/postgresql/data \
     -p 5432:5432 \
     postgres:13
 ```
@@ -132,6 +132,7 @@ docker run -it \
     * `POSTGRES_DB` is the name that we will give the database. We chose `ny_taxi`.
 * `-v` points to the volume directory. The colon `:` separates the first part (path to the folder in the host computer) from the second part (path to the folder inside the container).
     * Path names must be absolute. If you're in a UNIX-like system, you can use `pwd` to print you local folder as a shortcut; this example should work with both `bash` and `zsh` shells, but `fish` will require you to remove the `$`.
+    * This command will only work if you run it from a directory which contains the `ny_taxi_postgres_data` subdirectory you created above.
 * The `-p` is for port mapping. We map the default Postgres port to the same port in the host.
 * The last argument is the image name and tag. We run the official `postgres` image on its version `13`.
 
@@ -156,4 +157,129 @@ We will use data from the [NYC TLC Trip Record Data website](https://www1.nyc.go
 
 >Note: knowledge of Jupyter Notebook, Python environment management and Pandas is asumed in these notes. Please check [this link](https://gist.github.com/ziritrion/9b80e47956adc0f20ecce209d494cd0a#pandas) for a Pandas cheatsheet and [this link](https://gist.github.com/ziritrion/8024025672ea92b8bdeb320d6015aa0d) for a Conda cheatsheet for Python environment management.
 
-Check the completed `upload-data.ipynb` [in this link](../1_intro/ny_taxi_postgres_data/upload-data.ipynb) for a detailed guide.
+Check the completed `upload-data.ipynb` [in this link](../1_intro/upload-data.ipynb) for a detailed guide. Feel free to copy the file to your work directory; in the same directory you will need to have the CSV file linked above and the `ny_taxi_postgres_data` subdirectory.
+
+## Running pgAdmin and Docker networking
+
+_([Video source](https://www.youtube.com/watch?v=hCAIVe9N0ow&list=PL3MmuxUbc_hJed7dXYoJw8DoCuVHhGEQb&index=5))_
+
+`pgcli` is a handy tool but it's cumbersome to use. [`pgAdmin` is a web-based tool](https://www.pgadmin.org/) that makes it more convenient to access and manage our databases. It's possible to run pgAdmin as as container along with the Postgres container, but both containers will have to be in the same _virtual network_ so that they can find each other.
+
+Let's create a virtual Docker network called `pg-network`:
+
+```bash
+docker network create pg-network
+```
+
+We will now re-run our Postgres container with the added network name and the container network name, so that the pgAdmin container can find it (we'll use `pg-database` for the container name):
+
+```bash
+docker run -it \
+    -e POSTGRES_USER="root" \
+    -e POSTGRES_PASSWORD="root" \
+    -e POSTGRES_DB="ny_taxi" \
+    -v $(pwd)/ny_taxi_postgres_data:/var/lib/postgresql/data \
+    -p 5432:5432 \
+    --network=pg-network \
+    --name pg-database \
+    postgres:13
+```
+
+We will now run the pgAdmin container on another terminal:
+
+```bash
+docker run -it \
+    -e PGADMIN_DEFAULT_EMAIL="admin@admin.com" \
+    -e PGADMIN_DEFAULT_PASSWORD="root" \
+    -p 8080:80 \
+    --network=pg-network \
+    --name pgadmin \
+    dpage/pgadmin4
+```
+* The container needs 2 environment variables: a login email and a password. We use `admin@admin.com` and `root` in this example.
+ * ***IMPORTANT: these are example values for testing and should never be used on production. Change them accordingly when needed.***
+* pgAdmin is a web app and its default port is 80; we map it to 8080 in our localhost to avoid any possible conflicts.
+* Just like with the Postgres container, we specify a network and a name. However, the name in this example isn't really necessary because there won't be any containers trying to access this particular container.
+* The actual image name is `dpage/pgadmin4` .
+
+You should now be able to load pgAdmin on a web browser by browsing to `localhost:8080`. Use the same email and password you used for running the container to log in.
+
+Right-click on _Servers_ on the left sidebar and select _Create_ > _Server..._
+
+![steps](images/01_02.png)
+
+Under _General_ give the Server a name and under _Connection_ add the same host name, user and password you used when running the container.
+
+![steps](images/01_03.png)
+![steps](images/01_04.png)
+
+Click on _Save_. You should now be connected to the database.
+
+We will explore using pgAdmin in later lessons.
+
+# Terraform and Google Cloud Platform
+
+
+_([Video source](https://www.youtube.com/watch?v=Hajwnmj0xfQ&list=PL3MmuxUbc_hJed7dXYoJw8DoCuVHhGEQb&index=6))_
+
+[Terraform](https://www.terraform.io/) is an [infrastructure as code](https://www.wikiwand.com/en/Infrastructure_as_code) tool that allows us to provision infrastructure resources as code, thus making it possible to handle infrastructure as an additional software component and take advantage of tools such as version control. It also allows us to bypass the cloud vendor GUIs.
+
+During this course we will use [Google Cloud Platform](https://cloud.google.com/) (GCP) as our cloud services provider.
+
+## GCP initial setup
+
+_([Video source](https://www.youtube.com/watch?v=Hajwnmj0xfQ&list=PL3MmuxUbc_hJed7dXYoJw8DoCuVHhGEQb&index=6))_
+
+GCP is organized around _projects_. You may create a project and access all available GCP resources and services from the project dashboard.
+
+We will now create a project and a _service account_. A service account is like a user account but for apps and workloads; you may authorize or limit what resources are available to your apps with service accounts.
+
+Please follow these steps:
+
+1. Create an account on GCP. You should receive $300 in credit when signing up on GCP for the first time with an account.
+1. Setup a new project and write down the Project ID.
+    1. From the GCP Dashboard, click on the drop down menu next to the _Google Cloud Platform_ title to show the project list and click on _New project_.
+    1. Give the project a name. We will use `dtc-de` in this example. You can use the autogenerated Project ID (this ID must be unique to all of GCP, not just your account). Leave the organization as _No organization_. Click on _Create_.
+    1. Back on the dashboard, make sure that your project is selected. Click on the previous drop down menu to select it otherwise.
+1. Setup a service account for this project and download the JSON authentication key files.
+    1. _IAM & Admin_ > _Service accounts_ > _Create service account_
+    1. Provide a service account name. We will use `dtc-de-user`. Leave all other fields with the default values. Click on _Create and continue_.
+    1. Grant the Viewer role (_Basic_ > _Viewer_) to the service account and click on _Continue_
+    1. There is no need to grant users access to this service account at the moment. Click on _Done_.
+    1. With the service account created, click on the 3 dots below _Actions_ and select _Manage keys_.
+    1. _Add key_ > _Create new key_. Select _JSON_ and click _Create_. The files will be downloaded to your computer. Save them to a folder and write down the path.
+1. Download the [GCP SDK](https://cloud.google.com/sdk/docs/quickstart) for local setup. Follow the instructions to install and connect to your account and project.
+1. Set the environment variable to point to the auth keys.
+    1. The environment variable name is `GOOGLE_APPLICATION_CREDENTIALS`
+    1. The value for the variable is the path to the json authentication file you downloaded previously.
+    1. Check how to assign environment variables in your system and shell. In bash, the command should be:
+        ```bash
+        export GOOGLE_APPLICATION_CREDENTIALS="<path/to/authkeys>.json"
+        ```
+    1. Refresh the token and verify the authentication with the GCP SDK:
+        ```bash
+        gcloud auth application-default login
+        ```
+
+You should now be ready to work with GCP.
+
+## GCP setup for access
+
+_([Video source](https://www.youtube.com/watch?v=Hajwnmj0xfQ&list=PL3MmuxUbc_hJed7dXYoJw8DoCuVHhGEQb&index=6))_
+
+In the following chapters we will setup a _Data Lake_ on Google Cloud Storage and a _Data Warehouse_ in BigQuery. We will explore these concepts in future lessons but a Data Lake is where we would usually store data and a Data Warehouse provides a more structured way to access this data.
+
+We need to setup access first:
+
+1. Assign the following IAM Roles to the Service Account: Storage Admin, Storage Object Admin, BigQuery Admin, Viewer
+    1. On the GCP Project dashboard, go to _IAM & Admin_ > _IAM_
+    1. Select the previously created Service Account and edit the permissions by clicking on the pencil shaped icon on the left.
+    1. Add the following roles and click on _Save_ afterwards:
+        * `Storage Admin`: for creating and managing _buckets_.
+        * `Storage Object Admin`: for creating and managing _objects_ within the buckets.
+        * `BigQuery Admin`: for managing BigQuery resources and data.
+        * `Viewer` should already be present as a role.
+1. Enable APIs for the project (these are needed so that Terraform can interact with GCP):
+   * https://console.cloud.google.com/apis/library/iam.googleapis.com
+   * https://console.cloud.google.com/apis/library/iamcredentials.googleapis.com
+1. Make sure that the `GOOGLE_APPLICATION_CREDENTIALS` environment variable is set.

@@ -1,1 +1,5 @@
+*.DS_store
+
 *.csv
+1_intro/ny_taxi_postgres_data/*
+private/*
