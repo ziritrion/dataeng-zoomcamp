@@ -4,4 +4,5 @@
 1_intro/ny_taxi_postgres_data/*
 private/*
 1_intro/terraform/
+1_intro/data_pgadmin
 
