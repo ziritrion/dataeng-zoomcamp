@@ -372,6 +372,231 @@ And if you want to run the containers again in the background rather than in the
 docker-compose up -d
 ```
 
+## SQL refresher
+
+Below are a series of SQL query examples to remember how SQL works. For this example we'll asume that we're working with 2 tables named `trips` (list of all yelow taxi trips of NYC for January 2021) and `zones` (list of zone IDs for pick ups and drop offs).
+
+>Check the [homework](https://github.com/DataTalksClub/data-engineering-zoomcamp/blob/main/week_1_basics_n_setup/homework.md) for the session to learn about the `zones` table.
+
+```sql
+SELECT
+    *
+FROM
+    trips
+LIMIT 100;
+```
+* Selects all rows in the `trips` table. If there are more than 100 rows, select only the first 100.
+
+```sql
+SELECT
+    *
+FROM
+    trips t,
+    zones zpu,
+    zones zdo
+WHERE
+    t."PULocationID" = zpu."LocationID" AND
+    t."DOLocationID" = zdo."LocationID"
+LIMIT 100;
+```
+* Selects all rows in the `trips` table. If there are more than 100 rows, select only the first 100.
+* We give aliases to the `trips` and `zones` tables for easier access.
+* We replace the IDs inside `PULocationID` and `DOLocationID` with the actual zone IDs for pick ups and drop offs.
+* We use double quotes (`""`) for the column names because in Postgres we need to use them if the column names contains capital letters.
+
+```sql
+SELECT
+    tpep_pickup_datetime,
+    tpep_dropoff_datetime,
+    total_amount,
+    CONCAT(zpu."Borough", '/', zpu."Zone") AS "pickup_loc",
+    CONCAT(zdo."Borough", '/', zdo."Zone") AS "dropoff_loc"
+FROM
+    trips t,
+    zones zpu,
+    zones zdo
+WHERE
+    t."PULocationID" = zpu."LocationID" AND
+    t."DOLocationID" = zdo."LocationID"
+LIMIT 100;
+```
+* Same as previous but instead of the complete rows we only display specific columns.
+* We make use of ***joins*** (_implicit joins_ in this case) to display combined info as a single column.
+    * The new "virtual" column `pickup_loc` contains the values of both `Borough` and `Zone` columns of the `zones` table, separated by a slash (`/`).
+    * Same for `dropoff_loc`.
+* More specifically this is an ***inner join***, because we only select the rows that overlap between the 2 tables.
+* Learn more about SQL joins [here](https://dataschool.com/how-to-teach-people-sql/sql-join-types-explained-visually/) and [here](https://www.wikiwand.com/en/Join_(SQL)).
+
+```sql
+SELECT
+    tpep_pickup_datetime,
+    tpep_dropoff_datetime,
+    total_amount,
+    CONCAT(zpu."Borough", '/', zpu."Zone") AS "pickup_loc",
+    CONCAT(zdo."Borough", '/', zdo."Zone") AS "dropoff_loc"
+FROM
+    trips t JOIN zones zpu
+        ON t."PULocationID" = zpu."LocationID"
+    JOIN zones zdo
+        ON t."DOLocationID" = zdo."LocationID"
+LIMIT 100;
+```
+* Exactly the same statement as before but rewritten using explicit `JOIN` keywords.
+    * Explicit inner joins are preferred over implicit inner joins.
+* The `JOIN` keyword is used after the `FROM` statement rather than the `WHERE` statement. The `WHERE` statement is actually unneeded.
+    ```sql
+    SELECT whatever_columns FROM table_1 JOIN table_2_with_a_matching_column ON column_from_1=column_from_2
+    ```
+* You can also use the keyword `INNER JOIN` for clarity.
+* Learn more about SQL joins [here](https://dataschool.com/how-to-teach-people-sql/sql-join-types-explained-visually/) and [here](https://www.wikiwand.com/en/Join_(SQL)).
+
+```sql
+SELECT
+    tpep_pickup_datetime,
+    tpep_dropoff_datetime,
+    total_amount,
+    "PULocationID",
+    "DOLocationID"
+FROM
+    trips t
+WHERE
+    "PULocationID" is NULL
+LIMIT 100;
+```
+* Selects rows from the `trips` table whose pick up location is null and displays specific columns.
+* If you have not modified the original tables, this query should return an empty list.
+
+```sql
+SELECT
+    tpep_pickup_datetime,
+    tpep_dropoff_datetime,
+    total_amount,
+    "PULocationID",
+    "DOLocationID"
+FROM
+    trips t
+WHERE
+    "DOLocationID" NOT IN (
+        SELECT "LocationID" FROM zones
+    )
+LIMIT 100;
+```
+* Selects rows fromn the `trips` table whose drop off location ID does not appear in the `zones` table.
+* If you did not modify any rows in the original datasets, the query would return an empty list.
+
+```sql
+DELETE FROM zones WHERE "LocationID" = 142;
+```
+* Deletes all rows in the `zones` table with `LocationID` of 142.
+* If we were to run this query and then run the previous query, we would get a list of rows with `PULocationID` of 142.
+
+```sql
+SELECT
+    tpep_pickup_datetime,
+    tpep_dropoff_datetime,
+    total_amount,
+    CONCAT(zpu."Borough", '/', zpu."Zone") AS "pickup_loc",
+    CONCAT(zdo."Borough", '/', zdo."Zone") AS "dropoff_loc"
+FROM
+    trips t LEFT JOIN zones zpu
+        ON t."PULocationID" = zpu."LocationID"
+    LEFT JOIN zones zdo
+        ON t."DOLocationID" = zdo."LocationID"
+LIMIT 100;
+```
+* Similar to the join query from before but we use a ***left join*** instead.
+* ***Left joins*** shows all rows from the "left" part of the statement but only the rows from the "right" part that overlap with the "left" part, thus the name.
+* This join is useful if we deleted one of the `LocationID` rows like before. The inner join would omit some rows from the `trips` table, but this query will show all rows. However, since one ID is missing, the "virtual" columns we defined to transform location ID's to actual names will appear with empty strings if the query cannot find the location ID.
+* Learn more about SQL joins [here](https://dataschool.com/how-to-teach-people-sql/sql-join-types-explained-visually/) and [here](https://www.wikiwand.com/en/Join_(SQL)).
+
+```sql
+SELECT
+    tpep_pickup_datetime,
+    tpep_dropoff_datetime,
+    DATE_TRUNC('DAY', tpep_pickup_datetime),
+    total_amount,
+FROM
+    trips t
+LIMIT 100;
+```
+* Selects all rows from the `trips` table but displays specific columns.
+* `DATE_TRUNC` is a function that trunctates a timestamp. When using `DAY` as a parameter, it removes any smaller values (hours, minutes, seconds) and displays them as `00:00:00` instead.
+
+```sql
+SELECT
+    tpep_pickup_datetime,
+    tpep_dropoff_datetime,
+    CAST(tpep_pickup_datetime AS DATE) as "day",
+    total_amount,
+FROM
+    trips t
+LIMIT 100;
+```
+* Very similar to previous query, but instead it casts the `TIMESTAMP` type to `DATE`, so that the hours:minutes:seconds info is completely omitted rather than show as `00:00:00`. The columns will be displayed under the name `day`.
+
+```sql
+SELECT
+    CAST(tpep_pickup_datetime AS DATE) as "day",
+    COUNT(1)
+FROM
+    trips t
+GROUP BY
+    CAST(tpep_pickup_datetime AS DATE)
+ORDER BY "day" ASC;
+```
+* Counts the amount of records in the `trips` table grouped by day.
+* We remove the limit of 100 records because we do not want to restrict the amount of info on screen.
+* Grouping does not guarantee order, so we enforce that the rows will be displayed in ascending order from earliest to latest day.
+
+```sql
+SELECT
+    CAST(tpep_pickup_datetime AS DATE) as "day",
+    COUNT(1) as "count",
+    MAX(total_amount),
+    MAX(passenger_count)
+FROM
+    trips t
+GROUP BY
+    CAST(tpep_pickup_datetime AS DATE)
+ORDER BY "count" DESC;
+```
+* Similar to the previous query but orders the rows by count and displays them in descending order, so that the day with the highest amount of trips is shown first.
+* We also show the maximum amount that a driver earned in a trip for that day and the maximum passenger count on a single trip for that day.
+
+```sql
+SELECT
+    CAST(tpep_pickup_datetime AS DATE) as "day",
+    "DOLocationID",
+    COUNT(1) as "count",
+    MAX(total_amount),
+    MAX(passenger_count)
+FROM
+    trips t
+GROUP BY
+    1, 2
+ORDER BY "count" DESC;
+```
+* Similar to previous but we also include the drop off location column and we group by it as well, so that each row contains the amount of trips for that location by day.
+* Instead of having to repeat the same line in both the `SELECT` and `GROUP BY` parts, we can simply indicate the arguments we use after the `SELECT` keyword by order number.
+    * SQL is 1-indexed. The first argument is 1, not 0.
+
+```sql
+SELECT
+    CAST(tpep_pickup_datetime AS DATE) as "day",
+    "DOLocationID",
+    COUNT(1) as "count",
+    MAX(total_amount),
+    MAX(passenger_count)
+FROM
+    trips t
+GROUP BY
+    1, 2
+ORDER BY
+    "day" ASC,
+    "DOLocationID" ASC;
+```
+* Similar to previous query but we now order by ascending order both by day and then drop off location ID, both in ascending order.
+
 # Terraform and Google Cloud Platform
 
 
@@ -445,6 +670,8 @@ Please follow these steps:
 
 
 ## Terraform basics
+
+_([Video source](https://www.youtube.com/watch?v=dNkEgO-CExg&list=PL3MmuxUbc_hJed7dXYoJw8DoCuVHhGEQb&index=10))_
 
 There are 2 important components to Terraform: the code files and Terraform commands.
 
@@ -545,6 +772,8 @@ With a configuration ready, you are now ready to create your infrastructure. The
 
 ## Creating GCP infrastructure with Terraform
 
+_([Video source](https://www.youtube.com/watch?v=dNkEgO-CExg&list=PL3MmuxUbc_hJed7dXYoJw8DoCuVHhGEQb&index=10))_
+
 We will now create a new `main.tf` file as well as an auxiliary `variables.tf` file with all the blocks we will need for our project.
 
 The infrastructure we will need consists of a Cloud Storage Bucket (`google_storage-bucket`) for our _Data Lake_ and a BigQuery Dataset (`google_bigquery_dataset`).
@@ -600,3 +829,9 @@ terraform destroy
 ```
 
 Once again, you will have to confirm this step by typing `yes` when prompted. This will remove your complete stack from the cloud, so only use it when you're 100% sure of it.
+
+# Extra: Setting up and environment on Google Cloud
+
+If you cannot set up a local development environment, you may use part of the $300 credits of GCP in creating a Cloud VM and access to it via SSH to set up the environment there.
+
+[Follow the instructions in this video](https://www.youtube.com/watch?v=ae-CV2KfoN0&list=PL3MmuxUbc_hJed7dXYoJw8DoCuVHhGEQb&index=11).
