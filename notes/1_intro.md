@@ -171,6 +171,8 @@ Let's create a virtual Docker network called `pg-network`:
 docker network create pg-network
 ```
 
+>You can remove the network later with the command `docker network rm pg-network` . You can look at the existing networks with `docker network ls` .
+
 We will now re-run our Postgres container with the added network name and the container network name, so that the pgAdmin container can find it (we'll use `pg-database` for the container name):
 
 ```bash
@@ -375,11 +377,15 @@ And if you want to run the containers again in the background rather than in the
 docker-compose up -d
 ```
 
+If you want to re-run the dockerized ingest script when you run Postgres and pgAdmin with `docker-compose`, you will have to find the name of the virtual network that Docker compose created for the containers. You can use the command `docker network ls` to find it and then change the `docker run` command for the dockerized script to include the network name.
+
 ## SQL refresher
 
 Below are a series of SQL query examples to remember how SQL works. For this example we'll asume that we're working with 2 tables named `trips` (list of all yelow taxi trips of NYC for January 2021) and `zones` (list of zone IDs for pick ups and drop offs).
 
 >Check the [homework](https://github.com/DataTalksClub/data-engineering-zoomcamp/blob/main/week_1_basics_n_setup/homework.md) for the session to learn about the `zones` table.
+
+>For a more detailed look into SQL, check out [this article](https://towardsdatascience.com/sql-in-a-nutshell-part-1-basic-real-world-scenarios-33a25ba8d220).
 
 ```sql
 SELECT

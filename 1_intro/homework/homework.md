@@ -131,43 +131,14 @@ Run Postgres and load data as shown in the videos
 
 >Command:
 ```bash
-docker run -it \
-    -e POSTGRES_USER="root" \
-    -e POSTGRES_PASSWORD="root" \
-    -e POSTGRES_DB="ny_taxi" \
-    -v (pwd)/ny_taxi_postgres_data:/var/lib/postgresql/data \
-    -p 5432:5432 \
-    --network=pg-network \
-    --name pg-database \
-    postgres:13
-
-docker run -it \
-    -e PGADMIN_DEFAULT_EMAIL="admin@admin.com" \
-    -e PGADMIN_DEFAULT_PASSWORD="root" \
-    -p 8080:80 \
-    --network=pg-network \
-    --name pgadmin \
-    dpage/pgadmin4
+# from the working directory where docker-compose.yaml is
+docker-compose up
 ```
 
 We'll use the yellow taxi trips from January 2021:
 
 ```bash
 wget https://s3.amazonaws.com/nyc-tlc/trip+data/yellow_tripdata_2021-01.csv
-```
-
->Command:
-```bash
-docker run -it \
-    --network=pg-network \
-    taxi_ingest:v001 \
-    --user=root \
-    --password=root \
-    --host=pg-database \
-    --port=5432 \
-    --db=ny_taxi \
-    --table_name=yellow_taxi_trips \
-    --url="https://s3.amazonaws.com/nyc-tlc/trip+data/yellow_tripdata_2021-01.csv"
 ```
 
 You will also need the dataset with zones:
@@ -178,7 +149,23 @@ wget https://s3.amazonaws.com/nyc-tlc/misc/taxi+_zone_lookup.csv
 
 >Command:
 ```bash
-upload-data-homework.ipynb
+# Create a new ingest script that ingests both files called ingest_data.py, then dockerize it with
+docker build -t taxi_ingest:homework .
+
+# Now find the network where the docker-compose containers are running with
+docker network ls
+
+# Finally, run the dockerized script
+docker run -it \
+    --network=1_intro_default \
+    taxi_ingest:homework \
+    --user=root \
+    --password=root \
+    --host=pgdatabase \
+    --port=5432 \
+    --db=ny_taxi \
+    --table_name_1=trips \
+    --table_name_2=zones
 ```
 
 Download this data and put it to Postgres
@@ -187,13 +174,21 @@ Download this data and put it to Postgres
 
 How many taxi trips were there on January 15?
 
+Consider only trips that started on January 15.
+
 >Command:
 ```sql
-SELECT COUNT (1) FROM yellow_taxi_trips WHERE (tpep_pickup_datetime>='2021-01-15 00:00:00' AND tpep_dropoff_datetime<'2021-01-16 00:00:00')
+SELECT
+  COUNT(1)
+FROM
+  trips
+WHERE
+  (tpep_pickup_datetime>='2021-01-15 00:00:00' AND
+  tpep_pickup_datetime<'2021-01-16 00:00:00');
 ```
 >Anwer:
 ```
-52769
+53024
 ```
 
 ## Question 4. Average
@@ -201,14 +196,69 @@ SELECT COUNT (1) FROM yellow_taxi_trips WHERE (tpep_pickup_datetime>='2021-01-15
 Find the largest tip for each day. 
 On which day it was the largest tip in January?
 
+Use the pick up time for your calculations.
+
 (note: it's not a typo, it's "tip", not "trip")
+
+>Command:
+```sql
+SELECT
+  CAST(tpep_pickup_datetime AS DATE) as "day",
+  MAX(tip_amount) as "max_tip"
+FROM
+  trips
+GROUP BY
+  1
+ORDER BY
+  "max_tip" DESC;
+```
+>Answer:
+```
+2021-01-20
+
+The tip was 1140.44
+```
 
 ## Question 5. Most popular destination
 
 What was the most popular destination for passengers picked up 
 in central park on January 14?
 
+Use the pick up time for your calculations.
+
 Enter the zone name (not id). If the zone name is unknown (missing), write "Unknown" 
+
+>Command:
+```sql
+SELECT
+    CONCAT(zpu."Borough", '/', zpu."Zone") AS "pickup_loc",
+    CONCAT(zdo."Borough", '/', zdo."Zone") AS "dropoff_loc",
+    COUNT(1) AS "amount_of_trips"
+FROM
+    trips t JOIN zones zpu
+        ON t."PULocationID" = zpu."LocationID"
+    JOIN zones zdo
+        ON t."DOLocationID" = zdo."LocationID"
+WHERE
+	t."PULocationID" = (
+		SELECT
+			"LocationID"
+		FROM
+			zones zpu
+		WHERE
+			zpu."Zone" IN ('Central Park')
+  )
+GROUP BY
+	1, 2 
+ORDER BY
+	"amount_of_trips" DESC
+;
+```
+>Answer:
+```
+Upper East Side North
+total trips: 2234
+```
 
 ## Question 6. 
 
@@ -222,6 +272,28 @@ For example:
 "Jamaica Bay / Clinton East"
 
 If any of the zone names are unknown (missing), write "Unknown". For example, "Unknown / Clinton East". 
+
+>Command:
+```sql
+SELECT
+    CONCAT(zpu."Zone", '/', zdo."Zone") AS "zone_pair",
+    AVG(t."total_amount") AS "total_amount_average"
+FROM
+    trips t JOIN zones zpu
+        ON t."PULocationID" = zpu."LocationID"
+    JOIN zones zdo
+        ON t."DOLocationID" = zdo."LocationID"
+GROUP BY
+	1
+ORDER BY
+	2 DESC
+;
+```
+>Answer:
+```
+Alphabet City/Unknown
+with an average price of 2292.4
+```
 
 
 ## Submitting the solutions
