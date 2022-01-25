@@ -1,5 +1,33 @@
-# Introduction to Data Engineering
+>[Back to Index](README.md)
 
+>Next: [Data Ingestion](2_data_ingestion.md)
+
+### Table of contents
+
+- [Introduction to Data Engineering](#introduction-to-data-engineering)
+  - [Architecture](#architecture)
+  - [Data pipelines](#data-pipelines)
+- [Docker and Postgres](#docker-and-postgres)
+  - [Docker basic concepts](#docker-basic-concepts)
+  - [Creating a custom pipeline with Docker](#creating-a-custom-pipeline-with-docker)
+  - [Running Postgres in a container](#running-postgres-in-a-container)
+  - [Ingesting data to Postgres with Python](#ingesting-data-to-postgres-with-python)
+  - [Connecting pgAdmin and Postgres with Docker networking](#connecting-pgadmin-and-postgres-with-docker-networking)
+  - [Using the ingestion script with Docker](#using-the-ingestion-script-with-docker)
+    - [Exporting and testing the script](#exporting-and-testing-the-script)
+    - [Dockerizing the script](#dockerizing-the-script)
+  - [Running Postgres and pgAdmin with Docker-compose](#running-postgres-and-pgadmin-with-docker-compose)
+  - [SQL refresher](#sql-refresher)
+- [Terraform and Google Cloud Platform](#terraform-and-google-cloud-platform)
+  - [GCP initial setup](#gcp-initial-setup)
+  - [GCP setup for access](#gcp-setup-for-access)
+  - [Terraform basics](#terraform-basics)
+  - [Creating GCP infrastructure with Terraform](#creating-gcp-infrastructure-with-terraform)
+- [Extra content](#extra-content)
+  - [Setting up a development environment in a Google Cloud VM](#setting-up-a-development-environment-in-a-google-cloud-vm)
+  - [Port mapping and networks in Docker](#port-mapping-and-networks-in-docker)
+
+# Introduction to Data Engineering
 ***Data Engineering*** is the design and development of systems for collecting, storing and analyzing data at scale.
 
 ## Architecture
@@ -19,6 +47,8 @@ During the course we will replicate the following architecture:
 A **data pipeline** is a service that receives data as input and outputs more data. For example, reading a CSV file, transforming the data somehow and storing it as a table in a PostgreSQL database.
 
 ![data pipeline](images/01_01.png)
+
+_[Back to the top](#table-of-contents)_
 
 # Docker and Postgres
 
@@ -606,6 +636,8 @@ ORDER BY
 ```
 * Similar to previous query but we now order by ascending order both by day and then drop off location ID, both in ascending order.
 
+_[Back to the top](#table-of-contents)_
+
 # Terraform and Google Cloud Platform
 
 
@@ -839,8 +871,22 @@ terraform destroy
 
 Once again, you will have to confirm this step by typing `yes` when prompted. This will remove your complete stack from the cloud, so only use it when you're 100% sure of it.
 
-# Extra: Setting up and environment on Google Cloud
+_[Back to the top](#table-of-contents)_
+
+# Extra content
+
+## Setting up a development environment in a Google Cloud VM
 
 If you cannot set up a local development environment, you may use part of the $300 credits of GCP in creating a Cloud VM and access to it via SSH to set up the environment there.
 
 [Follow the instructions in this video](https://www.youtube.com/watch?v=ae-CV2KfoN0&list=PL3MmuxUbc_hJed7dXYoJw8DoCuVHhGEQb&index=11).
+
+## Port mapping and networks in Docker
+
+If you're having issues with Docker and networking (especially if you already have Postgres running locally in your host computer), a [videoguide is also available](https://www.youtube.com/watch?v=tOr4hTsHOzU).
+
+_[Back to the top](#table-of-contents)_
+
+>[Back to Index](README.md)
+
+>Next: [Data Ingestion](2_data_ingestion.md)
