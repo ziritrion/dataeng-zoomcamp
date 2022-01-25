@@ -45,7 +45,7 @@ Apply the plan and copy the output (after running `apply`) to the form
 var.project
   Your GCP Project ID
 
-  Enter a value: animated-surfer-338618
+  Enter a value: <omitted>
 
 
 Terraform used the selected providers to generate the following execution plan. Resource actions are indicated with the following symbols:
@@ -62,7 +62,7 @@ Terraform will perform the following actions:
       + id                         = (known after apply)
       + last_modified_time         = (known after apply)
       + location                   = "europe-west6"
-      + project                    = "animated-surfer-338618"
+      + project                    = "<omitted>"
       + self_link                  = (known after apply)
 
       + access {
@@ -85,7 +85,7 @@ Terraform will perform the following actions:
       + force_destroy               = true
       + id                          = (known after apply)
       + location                    = "EUROPE-WEST6"
-      + name                        = "dtc_data_lake_animated-surfer-338618"
+      + name                        = "dtc_data_lake_<omitted>"
       + project                     = (known after apply)
       + self_link                   = (known after apply)
       + storage_class               = "STANDARD"
@@ -119,8 +119,8 @@ Do you want to perform these actions?
 
 google_bigquery_dataset.dataset: Creating...
 google_storage_bucket.data-lake-bucket: Creating...
-google_bigquery_dataset.dataset: Creation complete after 1s [id=projects/animated-surfer-338618/datasets/trips_data_all]
-google_storage_bucket.data-lake-bucket: Creation complete after 2s [id=dtc_data_lake_animated-surfer-338618]
+google_bigquery_dataset.dataset: Creation complete after 1s [id=projects/<omitted>/datasets/trips_data_all]
+google_storage_bucket.data-lake-bucket: Creation complete after 2s [id=dtc_data_lake_<omitted>]
 
 Apply complete! Resources: 2 added, 0 changed, 0 destroyed.
 ```
