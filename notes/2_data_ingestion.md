@@ -108,6 +108,8 @@ UPLOAD TO BIGQUERY
   ↓
 (table in BQ)
 ```
+_Parquet_ is a [columnar storage datafile format](https://parquet.apache.org/) which is more efficient than CSV.
+
 This ***Data Workflow*** has more steps and even branches. This type of workflow is often called a ***Directed Acyclic Graph*** (DAG) because it lacks any loops and the data flow is well defined.
 
 The steps in capital letters are our ***jobs*** and the objects in between are the jobs' outputs, which behave as ***dependencies*** for other jobs. Each job may have its own set of ***parameters*** and there may also be global parameters which are the same for all of the jobs.
@@ -115,5 +117,105 @@ The steps in capital letters are our ***jobs*** and the objects in between are t
 A ***Workflow Orchestration Tool*** allows us to define data workflows and parametrize them; it also provides additional tools such as history and logging.
 
 The tool we will focus on in this course is **[Apache Airflow](https://airflow.apache.org/)**, but there are many others such as Luigi, Prefect, Argo, etc.
+
+## Airflow architecture
+
+A typical Airflow installation consists of the following components:
+
+![airflow architecture](https://airflow.apache.org/docs/apache-airflow/stable/_images/arch-diag-basic.png)
+
+* The **scheduler** handles both triggering scheduled workflows as well as submitting _tasks_ to the executor to run. The scheduler is the main "core" of Airflow.
+* The **executor** handles running tasks. In a default installation, the executor runs everything inside the scheduler but most production-suitable executors push task execution out to _workers_.
+* A **worker** simply executes tasks given by the scheduler.
+* A **webserver** which seves as the GUI.
+* A **DAG directory**; a folder with _DAG files_ which is read by the scheduler and the executor (an by extension by any worker the executor might have)
+* A **metadata database** (Postgres) used by the scheduler, the executor and the web server to store state. The backend of Airflow.
+* Additional components (not shown in the diagram):
+  * `redis`: a _message broker_ that forwards messages from the scheduler to workers.
+  * `flower`: app for monitoring the environment, available at port `5555` by default.
+  * `airflow-init`: initialization service which we will customize for our needs.
+
+Airflow will create a folder structure when running:
+* `./dags` - `DAG_FOLDER` for DAG files
+* `./logs` - contains logs from task execution and scheduler.
+* `./plugins` - for custom plugins
+
+Additional definitions:
+* ***DAG***: Directed acyclic graph, specifies the dependencies between a set of tasks with explicit execution order, and has a beginning as well as an end. (Hence, “acyclic”). A _DAG's Structure_ is as follows:
+  * DAG Definition
+  * Tasks (eg. Operators)
+  * Task Dependencies (control flow: `>>` or `<<` )  
+* ***Task***: a defined unit of work. The Tasks themselves describe what to do, be it fetching data, running analysis, triggering other systems, or more. Common Types of tasks are:
+  * ***Operators*** (used in this workshop) are predefined tasks. They're the most common.
+  * ***Sensors*** are a subclass of operator which wait for external events to happen.
+  * ***TaskFlow decorators*** (subclasses of Airflow's BaseOperator) are custom Python functions packaged as tasks.
+* ***DAG Run***: individual execution/run of a DAG. A run may be scheduled or triggered.
+* ***Task Instance***: an individual run of a single task. Task instances also have an indicative state, which could be `running`, `success`, `failed`, `skipped`, `up for retry`, etc.
+    * Ideally, a task should flow from `none`, to `scheduled`, to `queued`, to `running`, and finally to `success`.
+
+## Setting up Airflow with Docker
+
+### Pre-requisites
+
+1. This tutorial assumes that the [service account credentials JSON file](1_intro.md#gcp-initial-setup) is named `google_credentials.json` and stored in `$HOME/.google/credentials/`. Copy and rename your credentials file to the required path.
+2. `docker-compose` should be at least version v2.x+ and Docker Engine should have at least 5GB of RAM available, ideally 8GB. On Docker Desktop this can be changed in _Preferences_ > _Resources_.
+
+### Setup
+
+1. Create a new `airflow` subdirectory in your work directory.
+1. Download the official Docker-compose YAML file for the latest Airflow version.
+    ```bash
+    curl -LfO 'https://airflow.apache.org/docs/apache-airflow/2.2.3/docker-compose.yaml'
+    ```
+    * The official `docker-compose.yaml` file is quite complex and contains [several service definitions](https://airflow.apache.org/docs/apache-airflow/stable/start/docker.html#docker-compose-yaml).
+    * If you want a less overwhelming file that only runs the webserver, you may take a look at [this simplified YAML file](../2_data_ingestion/airflow/extras/docker-compose-nofrills.yml).
+    * For a refresher on how `docker-compose` works, you can [check out this lesson from the ML Zoomcamp](https://github.com/ziritrion/ml-zoomcamp/blob/main/notes/10_kubernetes.md#connecting-docker-containers-with-docker-compose).
+1. We now need to [set up the Airflow user](https://airflow.apache.org/docs/apache-airflow/stable/start/docker.html#setting-the-right-airflow-user). For MacOS, create a new `.env` in the same folder as the `docker-compose.yaml` file with the content below:
+    ```bash
+    AIRFLOW_UID=50000
+    ```
+1. The base Airflow Docker image won't work with GCP, so we need to [customize it](https://airflow.apache.org/docs/docker-stack/build.html) to suit our needs. You may download a GCP-ready Airflow Dockerfile [from this link](../2_data_ingestion/airflow/Dockerfile). A few things of note:
+    * We use the base Apache Airflow image as the base.
+    * We install the GCP SDK CLI tool so that Airflow can communicate with our GCP project.
+    * We also need to provide a [`requirements.txt` file](../2_data_ingestion/airflow/requirements.txt) to install Python dependencies. The dependencies are:
+      * `apache-airflow-providers-google` so that Airflow can use the GCP SDK.
+      * `pyarrow` , a library to work with parquet files.
+1. Alter the `x-airflow-common` service definition inside the `docker-compose.yaml` file as follows:
+   * We need to point to our custom Docker image. At the beginning, comment or delete the `image` field and uncomment the `build` line, or arternatively, use the following (make sure you respect YAML indentation):
+      ```yaml
+        build:
+          context: .
+          dockerfile: ./Dockerfile
+      ```
+    * Add a volume and point it to the folder where you stored the credentials json file. Assuming you complied with the pre-requisites and moved and renamed your credentials, add the following line after all the other volumes:
+      ```yaml
+      - ~/.google/credentials/:/.google/credentials:ro
+      ```
+    * Add 2 new environment variables right after the others: `GOOGLE_APPLICATION_CREDENTIALS` and `AIRFLOW_CONN_GOOGLE_CLOUD_DEFAULT`:
+      ```yaml
+      GOOGLE_APPLICATION_CREDENTIALS: /.google/credentials/google_credentials.json
+      AIRFLOW_CONN_GOOGLE_CLOUD_DEFAULT: 'google-cloud-platform://?extra__google_cloud_platform__key_path=/.google/credentials/google_credentials.json'
+      ```
+    * Change the `AIRFLOW__CORE__LOAD_EXAMPLES` value to `'false'`. This will prevent Airflow from populating its interface with DAG examples.
+1. You may find a modified `docker-compose.yaml` file [in this link](../2_data_ingestion/airflow/docker-compose.yaml).
+
+### Execution
+1. Build the image. It may take several minutes You only need to do this the first time you run Airflow or if you modified the Dockerfile or the `requirements.txt` file.
+    ```bash
+    docker-compose build
+    ```
+2. Initialize configs:
+    ```bash
+    docker-compose up airflow-init
+    ```
+3. Run Airflow
+    ```bash
+    docker-compose up
+    ```
+1. You may now access the Airflow GUI by browsing to `localhost:8080`. Username and password are both `airflow` .
+>***IMPORTANT***: this is ***NOT*** a production-ready setup! The username and password for Airflow have not been modified in any way; you can find them by searching for `_AIRFLOW_WWW_USER_USERNAME` and `_AIRFLOW_WWW_USER_PASSWORD` inside the `docker-compose.yaml` file.
+
+
+
 
 _[Back to the top](#table-of-contents)_

@@ -6,3 +6,6 @@ private/*
 1_intro/terraform/
 1_intro/data_pgadmin
 
+2_data_ingestion/airflow/dags/*
+2_data_ingestion/airflow/logs/*
+2_data_ingestion/airflow/plugins/*
