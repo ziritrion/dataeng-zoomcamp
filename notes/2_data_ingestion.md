@@ -215,7 +215,40 @@ Additional definitions:
 1. You may now access the Airflow GUI by browsing to `localhost:8080`. Username and password are both `airflow` .
 >***IMPORTANT***: this is ***NOT*** a production-ready setup! The username and password for Airflow have not been modified in any way; you can find them by searching for `_AIRFLOW_WWW_USER_USERNAME` and `_AIRFLOW_WWW_USER_PASSWORD` inside the `docker-compose.yaml` file.
 
+## Creating a DAG
 
+_For reference, check out [Airflow's docs](https://airflow.apache.org/docs/apache-airflow/stable/concepts/dags.html)._
 
+A DAG is created as a Python script which imports a series of libraries from Airflow.
+
+There are [3 different ways of declaring a DAG](https://airflow.apache.org/docs/apache-airflow/stable/concepts/dags.html#declaring-a-dag). Here's an example definition using a _[context manager](https://book.pythontips.com/en/latest/context_managers.html)_:
+
+```python
+with DAG(dag_id="my_dag_name") as dag:
+    op1 = DummyOperator(task_id="task1")
+    op2 = DummyOperator(task_id="task2")
+    op1 >> op2
+```
+* When declaring a DAG we must provide at least a `dag_id` parameter. There are many additional parameters available.
+* The content of the DAG is composed of _tasks_. This example contains 2 _operators_, which are predefined tasks provided by Airflow's libraries and plugins.
+  * An operator only has to be declared with any parameters that it may require. There is no need to define anything inside them.
+  * All operators must have at least a `task_id` parameter.
+* Finally, at the end of the definition we define the _task dependencies_, which is what ties the tasks together and defines the actual structure of the DAG.
+  * Task dependencies are primarily defined with the `>>` (downstream) and `<<` (upstream) control flow operators.
+  * Additional functions are available for more complex control flow definitions.
+* A single Python script may contain multiple DAGs.
+
+Many operators inside a DAG may have common arguments with the same values (such as `start_date`). We can define a `default_args` dict which all tasks within the DAG will inherit:
+
+```python
+default_args = {
+    'start_date': datetime(2016, 1, 1),
+    'owner': 'airflow'
+}
+
+with DAG('my_dag', default_args=default_args) as dag:
+    op = DummyOperator(task_id='dummy')
+    print(op.owner)  # "airflow"
+```
 
 _[Back to the top](#table-of-contents)_
