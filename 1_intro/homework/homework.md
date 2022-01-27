@@ -186,9 +186,15 @@ WHERE
   (tpep_pickup_datetime>='2021-01-15 00:00:00' AND
   tpep_pickup_datetime<'2021-01-16 00:00:00');
 ```
->Anwer:
+>Anwer (correct):
 ```
 53024
+```
+>Proposed command for solution:
+```sql
+select count(*)
+from trips
+where tpep_pickup_datetime::date = '2021-01-15'
 ```
 
 ## Question 4. Average
@@ -212,11 +218,20 @@ GROUP BY
 ORDER BY
   "max_tip" DESC;
 ```
->Answer:
+>Answer (correct):
 ```
 2021-01-20
 
 The tip was 1140.44
+```
+>Proposed command for solution:
+```sql
+select date_trunc('day', tpep_pickup_datetime) as pickup_day,
+  max(tip_amount) as max_tip
+from trips
+group by pickup_day
+order by max_tip desc
+limit 1;
 ```
 
 ## Question 5. Most popular destination
@@ -254,10 +269,29 @@ ORDER BY
 	"amount_of_trips" DESC
 ;
 ```
->Answer:
+>Answer (**incorrect!**):
 ```
 Upper East Side North
 total trips: 2234
+```
+>Proposed command for solution:
+```sql
+select coalesce(dozones.zone,'Unknown') as zone,
+count(*) as cant_trips
+from trips as taxi
+  inner join zones.taxi_zone_lookup as puzones
+    on taxi.pulocationid = puzones.locationid
+  left join zones.taxi_zone_lookup as dozones
+    on taxi.dolocationid = dozones.locationid
+where puzones.zone ilike '%central park%'
+  and tpep_pickup_datetime::date = '2021-01-14'
+group by 1
+order by cant_trips desc
+limit 1;
+```
+>Actual answer:
+```
+Upper East Side South
 ```
 
 ## Question 6. 
@@ -289,10 +323,23 @@ ORDER BY
 	2 DESC
 ;
 ```
->Answer:
+>Answer (correct):
 ```
 Alphabet City/Unknown
 with an average price of 2292.4
+```
+>Proposed command for solution:
+```sql
+select concat(coalesce(puzones.zone,'Unknown'), '/', coalesce(dozones.zone,'Unknown')) as pickup_dropoff,
+  avg(total_amount) as avg_price_ride
+from trips as taxi
+  left join zones as puzones
+    on taxi.pulocationid = puzones.locationid
+  left join zones as dozones
+    on taxi.dolocationid = dozones.locationid
+group by 1
+order by avg_price_ride desc
+limit 1;
 ```
 
 
