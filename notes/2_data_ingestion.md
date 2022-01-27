@@ -196,6 +196,11 @@ Additional definitions:
       GOOGLE_APPLICATION_CREDENTIALS: /.google/credentials/google_credentials.json
       AIRFLOW_CONN_GOOGLE_CLOUD_DEFAULT: 'google-cloud-platform://?extra__google_cloud_platform__key_path=/.google/credentials/google_credentials.json'
       ```
+    * Add 2 new additional environment variables for your GCP project ID and the GCP bucket that Terraform should have created [in the previous lesson](1_intro.md#creating-gcp-infrastructure-with-terraform). You can find this info in your GCP project's dashboard.
+      ```yaml
+      GCP_PROJECT_ID: '<your_gcp_project_id>'
+      GCP_GCS_BUCKET: '<your_bucket_id>'
+      ```
     * Change the `AIRFLOW__CORE__LOAD_EXAMPLES` value to `'false'`. This will prevent Airflow from populating its interface with DAG examples.
 1. You may find a modified `docker-compose.yaml` file [in this link](../2_data_ingestion/airflow/docker-compose.yaml).
 
@@ -250,5 +255,50 @@ with DAG('my_dag', default_args=default_args) as dag:
     op = DummyOperator(task_id='dummy')
     print(op.owner)  # "airflow"
 ```
+
+For this lesson we will focus mostly on operator tasks. Here are some examples:
+
+```python
+download_dataset_task = BashOperator(
+    task_id="download_dataset_task",
+    bash_command=f"curl -sS {dataset_url} > {path_to_local_home}/{dataset_file}"
+)
+```
+* A `BashOperator` is a simple bash command which is passed on the `bash_command` parameter. In this example, we're doenloading some file.
+
+```python
+  format_to_parquet_task = PythonOperator(
+      task_id="format_to_parquet_task",
+      python_callable=format_to_parquet,
+      op_kwargs={
+          "src_file": f"{path_to_local_home}/{dataset_file}",
+      },
+  )
+```
+* A `PythonOperator` calls a Python method rather than a bash command.
+* In this example, the `python_callable` argument receives a function that we've defined before in the DAG file, which receives a file name as a parameter then opens that file and saves it in parquet format.
+* the `op_kwargs` parameter is a dict with all necessary parameters for the function we're calling. This example contains a single argument with a file name.
+
+A list of operators is available on [Airflow's Operators docs](https://airflow.apache.org/docs/apache-airflow/stable/concepts/operators.html). A list of GCP-specific operators [is also available](https://airflow.apache.org/docs/apache-airflow-providers-google/stable/operators/cloud/index.html).
+
+Finally, at the very end of the DAG you will find the ***control flow***.
+
+```python
+download_dataset_task >> format_to_parquet_task
+```
+* Control flows define the dependencies of tasks inside a DAG. A task depends on another to carry out its job, so the control flow defines the order in which each task must be run.
+* The main 2 operators for defining control flows are ``>>`` (downstream) and `<<` (upstream). For more complex flows with branching and conditions, additional methods are available.
+
+## Running DAGs
+
+There are 2 main ways to run DAGs:
+* Triggering them manually via the web UI or programatically via API
+* Scheduling them
+
+When you trigger or schedule a DAG, a DAG instance is created, called a ***DAG run***. DAG runs can run in **parallel for the same DAG** for separate data intervals.
+
+Each task inside a DAG is also instantiated, and a state is given to each task instance. Ideally, a task should flow from `none`, to `scheduled`, to `queued`, to `running`, and finally to `success`.
+
+
 
 _[Back to the top](#table-of-contents)_
