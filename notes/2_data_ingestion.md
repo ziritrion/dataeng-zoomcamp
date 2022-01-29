@@ -472,3 +472,70 @@ We will now run a slightly more complex DAG that will download the NYC taxi trip
 1. You may now shutdown Airflow by running `docker-compose down` on the terminal where you run it.
 
 _[Back to the top](#table-of-contents)_
+
+# GCP's Transfer Service
+
+_[Video source](https://www.youtube.com/watch?v=rFOFTfD1uGk&list=PL3MmuxUbc_hJed7dXYoJw8DoCuVHhGEQb&index=22)_
+
+[Transfer Service](https://cloud.google.com/storage-transfer-service) is a GCP service to transfer data from multiple sources to Google's Cloud Storage. This is useful for Data Lake purposes.
+
+Transfer Service _jobs_ can be created via the GCP UI or with Terraform.
+
+## Creating a Transfer Service from GCP's web UI
+
+We will use the _Transfer Service | cloud_ submenu. Creating a job takes 4 steps:
+
+1. Choose a source.
+    * For this example we will grab the [NYC taxi trips data](https://www1.nyc.gov/site/tlc/about/tlc-trip-record-data.page) which is stored on Amazon S3, so we will pick _Amazon S3_ as _source type_.
+    * Input a bucket name. The URL for the dataset from lesson 1 is `https://s3.amazonaws.com/nyc-tlc/trip+data/yellow_tripdata_2021-01.csv`; the bucket name is the name right after the domain, `nyc-tlc`.
+    * Input your [AWS access key and secret key](https://console.aws.amazon.com/iam/home?#/security_credentials).
+        ![transfer source](images/02_15.png)
+1. Choose a destination bucket.
+    * Create a new bucket by clicking on _Browse_ > _Create new bucket_ icon.
+        * Choose a unique name
+        * Pick single region location type and choose your nearest location.
+        * Choose the Standard default storage class.
+        * Select Uniform access control
+        * Do not select any protection tools.
+        * Click on _Create_.
+    * Once the bucket has been created, select it in the bucket browser side panel and click on _Select_.
+        ![transfer source](images/02_16.png)
+1. Choose the settings for the job
+    * Type in a description of your choosing.
+    * The default _overwrite if different_ and _never delete_ options should work.
+        ![transfer source](images/02_17.png)
+1. Choose the scheduling options
+    * We will only run this job once, with the _Starting now_ option
+        ![transfer source](images/02_18.png)
+
+Once you click on the _Create_ button, the job will start transfering data right away. You may click on it to check the progress.
+
+![transfer source](images/02_19.png)
+![transfer source](images/02_20.png)
+
+You may now check your Storage dashboard; you should see a new bucket has been created there which contains all the data from the Amazon S3 bucket.
+
+Be aware that Transfer Service charges you per transferred gigabyte. For single use jobs, the Transfer Service UI is preferred to DAGs which take time to create and debug, but costs can add quickly if you're relying on this service to download data periodically.
+
+## Creating a Transfer Service with Terraform
+
+We can use a [Transfer Service Terraform resource](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/storage_transfer_job) as well to recreate what we just did in the web UI in the form of a Terraform config.
+
+The config will contains the following:
+
+* A _data source_ definition using a [`data` block](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/storage_transfer_job) to define our GCP service account.
+* A GCP bucket resource that will receive the contents. 
+* A IAM rule resource for the Transfer Service that will be assigned to the bucket.
+* Finally, the actual transfer service resource in which we can define additional info regarding the transfer specs and schedule.
+
+A finalized `transfer_service.tf` file is available [in this link](../1_intro/terraform/transfer_service.tf), which is based on the example on the [official documentation](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/storage_transfer_job).
+* You will have to modify the file to change the bucket name to something unique.
+* You will have to add new variables to the `variables.tf` file: `access_key_id` and `aws_secret_key` for both access and secret keys for AWS.
+    * It is ***strongly recommended*** that you ***DO NOT*** write default values for these variables, as both the access and secret keys are highly sensitive data that should be kept secret at all times. If no default value is set, Terraform will ask for the keys when applying the changes.
+* You will have to modify the `schedule_start_date` and `schedule_end_date` blocks near the end of the file. Change them to your current date to run the job once.
+
+Copy the `transfer_service.tf` to your Terraform work folder and run `terraform plan` to see the changes that will be deployed.
+
+If you agree with the changes, run `terraform apply` to start the Transfer Service job. You should now be able to see the job in the web UI.
+
+_[Back to the top](#table-of-contents)_

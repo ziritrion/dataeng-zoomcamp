@@ -22,3 +22,14 @@ variable "BQ_DATASET" {
   type = string
   default = "trips_data_all"
 }
+
+# Transfer service
+variable "access_key_id" {
+  description = "AWS access key"
+  type = string
+}
+
+variable "aws_secret_key" {
+  description = "AWS secret key"
+  type = string
+}
