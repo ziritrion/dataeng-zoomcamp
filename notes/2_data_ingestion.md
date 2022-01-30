@@ -6,6 +6,30 @@
 
 ### Table of contents
 
+- [Data Ingestion](#data-ingestion)
+- [Data Lake](#data-lake)
+  - [What is a Data Lake?](#what-is-a-data-lake)
+  - [Data Lake vs Data Warehouse](#data-lake-vs-data-warehouse)
+  - [ETL vs ELT](#etl-vs-elt)
+  - [Data Swamp - Data Lakes gone wrong](#data-swamp---data-lakes-gone-wrong)
+  - [Data Lake Cloud Providers](#data-lake-cloud-providers)
+- [Orchestration with Airflow](#orchestration-with-airflow)
+  - [Introduction to Workflow Orchestration](#introduction-to-workflow-orchestration)
+  - [Airflow architecture](#airflow-architecture)
+  - [Setting up Airflow with Docker](#setting-up-airflow-with-docker)
+    - [Pre-requisites](#pre-requisites)
+    - [Setup](#setup)
+    - [Execution](#execution)
+  - [Creating a DAG](#creating-a-dag)
+  - [Running DAGs](#running-dags)
+  - [Airflow and DAG tips and tricks](#airflow-and-dag-tips-and-tricks)
+- [Airflow in action](#airflow-in-action)
+  - [Ingesting data to local Postgres with Airflow](#ingesting-data-to-local-postgres-with-airflow)
+  - [Ingesting data to GCP](#ingesting-data-to-gcp)
+- [GCP's Transfer Service](#gcps-transfer-service)
+  - [Creating a Transfer Service from GCP's web UI](#creating-a-transfer-service-from-gcps-web-ui)
+  - [Creating a Transfer Service with Terraform](#creating-a-transfer-service-with-terraform)
+
 # Data Ingestion
 
 This lesson will cover the topics of _Data Lake_ and _pipelines orchestration with Airflow_.
@@ -489,6 +513,7 @@ We will use the _Transfer Service | cloud_ submenu. Creating a job takes 4 steps
     * For this example we will grab the [NYC taxi trips data](https://www1.nyc.gov/site/tlc/about/tlc-trip-record-data.page) which is stored on Amazon S3, so we will pick _Amazon S3_ as _source type_.
     * Input a bucket name. The URL for the dataset from lesson 1 is `https://s3.amazonaws.com/nyc-tlc/trip+data/yellow_tripdata_2021-01.csv`; the bucket name is the name right after the domain, `nyc-tlc`.
     * Input your [AWS access key and secret key](https://console.aws.amazon.com/iam/home?#/security_credentials).
+        * Alternatively, some S3 URLs put the bucket name as the lowest subdomain; this URL is also valid: `https://nyc-tlc.s3.amazonaws.com/trip+data/yellow_tripdata_2021-01.csv`
         ![transfer source](images/02_15.png)
 1. Choose a destination bucket.
     * Create a new bucket by clicking on _Browse_ > _Create new bucket_ icon.
@@ -539,3 +564,9 @@ Copy the `transfer_service.tf` to your Terraform work folder and run `terraform 
 If you agree with the changes, run `terraform apply` to start the Transfer Service job. You should now be able to see the job in the web UI.
 
 _[Back to the top](#table-of-contents)_
+
+>Previous: [Introduction to Data Engineering](1_intro.md)
+
+>[Back to index](README.md)
+
+>Next: (Coming soon)
