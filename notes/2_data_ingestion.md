@@ -18,7 +18,8 @@
   - [Airflow architecture](#airflow-architecture)
   - [Setting up Airflow with Docker](#setting-up-airflow-with-docker)
     - [Pre-requisites](#pre-requisites)
-    - [Setup](#setup)
+    - [Setup (full version)](#setup-full-version)
+    - [Setup (lite version)](#setup-lite-version)
     - [Execution](#execution)
   - [Creating a DAG](#creating-a-dag)
   - [Running DAGs](#running-dags)
@@ -192,7 +193,9 @@ _[Video source](https://www.youtube.com/watch?v=lqDMzReAtrw&list=PL3MmuxUbc_hJed
 1. This tutorial assumes that the [service account credentials JSON file](1_intro.md#gcp-initial-setup) is named `google_credentials.json` and stored in `$HOME/.google/credentials/`. Copy and rename your credentials file to the required path.
 2. `docker-compose` should be at least version v2.x+ and Docker Engine should have at least 5GB of RAM available, ideally 8GB. On Docker Desktop this can be changed in _Preferences_ > _Resources_.
 
-### Setup
+### Setup (full version)
+
+Please follow these instructions for deploying the "full" Airflow with Docker. Instructions for a "lite" version are provided in the next section but you must follow these steps first.
 
 1. Create a new `airflow` subdirectory in your work directory.
 1. Download the official Docker-compose YAML file for the latest Airflow version.
@@ -200,12 +203,15 @@ _[Video source](https://www.youtube.com/watch?v=lqDMzReAtrw&list=PL3MmuxUbc_hJed
     curl -LfO 'https://airflow.apache.org/docs/apache-airflow/2.2.3/docker-compose.yaml'
     ```
     * The official `docker-compose.yaml` file is quite complex and contains [several service definitions](https://airflow.apache.org/docs/apache-airflow/stable/start/docker.html#docker-compose-yaml).
-    * If you want a less overwhelming file that only runs the webserver, you may take a look at [this simplified YAML file](../2_data_ingestion/airflow/extras/docker-compose-nofrills.yml).
     * For a refresher on how `docker-compose` works, you can [check out this lesson from the ML Zoomcamp](https://github.com/ziritrion/ml-zoomcamp/blob/main/notes/10_kubernetes.md#connecting-docker-containers-with-docker-compose).
 1. We now need to [set up the Airflow user](https://airflow.apache.org/docs/apache-airflow/stable/start/docker.html#setting-the-right-airflow-user). For MacOS, create a new `.env` in the same folder as the `docker-compose.yaml` file with the content below:
     ```bash
     AIRFLOW_UID=50000
     ```
+    * In all other operating systems, you may need to generate a `.env` file with the appropiate UID with the following command:
+        ```bash
+        echo -e "AIRFLOW_UID=$(id -u)" > .env
+        ```
 1. The base Airflow Docker image won't work with GCP, so we need to [customize it](https://airflow.apache.org/docs/docker-stack/build.html) to suit our needs. You may download a GCP-ready Airflow Dockerfile [from this link](../2_data_ingestion/airflow/Dockerfile). A few things of note:
     * We use the base Apache Airflow image as the base.
     * We install the GCP SDK CLI tool so that Airflow can communicate with our GCP project.
@@ -237,6 +243,29 @@ _[Video source](https://www.youtube.com/watch?v=lqDMzReAtrw&list=PL3MmuxUbc_hJed
 1. You may find a modified `docker-compose.yaml` file [in this link](../2_data_ingestion/airflow/docker-compose.yaml).
 1. Additional notes:
     * The YAML file uses [`CeleryExecutor`](https://airflow.apache.org/docs/apache-airflow/stable/executor/celery.html) as its executor type, which means that tasks will be pushed to workers (external Docker containers) rather than running them locally (as regular processes). You can change this setting by modifying the `AIRFLOW__CORE__EXECUTOR` environment variable under the `x-airflow-common` environment definition.
+
+You may now skip to the [Execution section](#execution) to deploy Airflow, or continue reading to modify your `docker-compose.yaml` file further for a less resource-intensive Airflow deployment.
+
+### Setup (lite version)
+
+_[Video source](https://www.youtube.com/watch?v=A1p5LQ0zzaQ&list=PL3MmuxUbc_hJed7dXYoJw8DoCuVHhGEQb&index=23)_
+
+The current `docker-compose.yaml` file we've generated will deploy multiple containers which will require lots of resources. This is the correct approach for running multiple DAGs accross multiple nodes in a Kubernetes deployment but it's very taxing on a regular local computer such as a laptop.
+
+If you want a less overwhelming YAML that only runs the webserver and the scheduler and runs the DAGs in the scheduler rather than running them in external workers, please modify the `docker-compose.yaml` file following these steps:
+
+1. Remove the `redis`, `airflow-worker`, `airflow-triggerer` and `flower` services.
+1. Change the `AIRFLOW__CORE__EXECUTOR` environment variable from `CeleryExecutor` to `LocalExecutor` .
+1. At the end of the `x-airflow-common` definition, within the `depends-on` block, remove these 2 lines:
+    ```yaml
+    redis:
+      condition: service_healthy
+    ```
+1. Comment out the `AIRFLOW__CELERY__RESULT_BACKEND` and `AIRFLOW__CELERY__BROKER_URL` environment variables.
+
+You should now have a simplified Airflow "lite" YAML file ready for deployment and may continue to the next section.
+
+For convenience, a simplified YAML version is available [in this link](../2_data_ingestion/airflow/extras/docker-compose-nofrills.yml).
 
 ### Execution
 1. Build the image. It may take several minutes You only need to do this the first time you run Airflow or if you modified the Dockerfile or the `requirements.txt` file.
