@@ -2,8 +2,9 @@
 
 Below you will find links to the notes for each lesson.
 
-* [Session 1: Introduction to Data Engineering](1_intro.md)
-* [Session 2: Data Ingestion](2_data_ingestion.md)
+* [Lesson 1: Introduction to Data Engineering](1_intro.md)
+* [Lesson 2: Data Ingestion](2_data_ingestion.md)
+* [Lesson 3: Data Warehouse](3_data_warehouse.md)
 
 Additionally, the following gists with cheatsheets are available.
 

@@ -2,7 +2,7 @@
 
 >[Back to index](README.md)
 
->Next: (Coming soon)
+>Next: [Data Warehouse](3_data_warehouse.md)
 
 ### Table of contents
 
@@ -598,4 +598,4 @@ _[Back to the top](#table-of-contents)_
 
 >[Back to index](README.md)
 
->Next: (Coming soon)
+>Next: [Data Warehouse](3_data_warehouse.md)
