@@ -9,3 +9,7 @@ private/*
 2_data_ingestion/airflow/dags/*
 2_data_ingestion/airflow/logs/*
 2_data_ingestion/airflow/plugins/*
+
+3_data_warehouse/airflow/dags/*
+3_data_warehouse/airflow/logs/*
+3_data_warehouse/airflow/plugins/*

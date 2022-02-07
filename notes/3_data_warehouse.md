@@ -1,4 +1,30 @@
+>Previous: [Data Warehouse](3_data_warehouse.md)
+
+>[Back to index](README.md)
+
+>Next: (Coming soon)
+
 ### Table of contents
+
+- [Data Warehouse](#data-warehouse)
+- [OLAP vs OLTP](#olap-vs-oltp)
+- [What is a Data Warehouse?](#what-is-a-data-warehouse)
+- [BigQuery](#bigquery)
+  - [Pricing](#pricing)
+  - [External tables](#external-tables)
+  - [Partitions](#partitions)
+  - [Clustering](#clustering)
+  - [Partitioning vs Clustering](#partitioning-vs-clustering)
+  - [Best practices](#best-practices)
+  - [Internals](#internals)
+    - [BigQuery Architecture](#bigquery-architecture)
+    - [Column-oriented vs record-oriented storage](#column-oriented-vs-record-oriented-storage)
+- [Machine Learning with BigQuery](#machine-learning-with-bigquery)
+  - [Introduction to BigQuery ML](#introduction-to-bigquery-ml)
+  - [BigQuery ML deployment](#bigquery-ml-deployment)
+- [Integrating BigQuery with Airflow](#integrating-bigquery-with-airflow)
+  - [Airflow setup](#airflow-setup)
+  - [Creating a Cloud Storage to BigQuery DAG](#creating-a-cloud-storage-to-bigquery-dag)
 
 # Data Warehouse
 
@@ -507,3 +533,63 @@ The following steps are based on [this official tutorial](https://cloud.google.c
     ```
 
 _[Back to the top](#table-of-contents)_
+
+# Integrating BigQuery with Airflow
+
+We will now use Airflow to automate the creation of BQ tables, both normal and partitioned, from the files we stored in our Data Lake [in lesson 2](2_data_ingestion.md#airflow-in-action).
+
+## Airflow setup
+
+You may use the same working directory we used for Lesson 2 or you may create a new one for this lesson. In that case, make sure you have the following components:
+* The `docker-compose.yaml` file for deploying Airflow.
+  * You may use either the [default YAML file](2_data_ingestion#setup-full-version) or the [no-frills file](2_data_ingestion#setup-lite-version).
+* The `.env` file with the `AIRFLOW_UID` and any additional environment variables you may need.
+* The `dags`, `logs` and `plugins` folders.
+* The `Dockerfile` for creating a custom Airflow image with the gcloud sdk.
+* Optionally, you may include a `scripts` folder and place within an `entrypoint.sh` bash script in order to customize the intialization of Airflow. You may download an example script [from this link](https://github.com/DataTalksClub/data-engineering-zoomcamp/raw/main/week_3_data_warehouse/airflow/scripts/entrypoint.sh). You may learn more aboutthe Airflow entrypoint [in the official docs](https://airflow.apache.org/docs/docker-stack/entrypoint.html).
+
+You may now deploy Airflow [with Docker-compose](2_data_ingestion.md#execution).
+
+## Creating a Cloud Storage to BigQuery DAG
+
+We will now create a new DAG inside the `dags` folder. In this example we will call it `gcs_2_bq_dag.py`.
+
+1. Based on [the original DAG file we used in lesson 2](../2_data_ingestion/airflow/dags/data_ingestion_gcs_dag.py), we will copy the necessary imports and additional code.
+    * We won't be using `BashOperator` nor `PythonOperator` because we will use the official Google-provided operators. We won't use PyArrow either because we will only deal with the files in our Data Lake.
+    * Add the `default_args` dict and the DAG declaration.
+    * Copy the `BigQueryCreateExternalTableOperator` block.
+1. Define the task dependencies at the end of the DAG. We will use the following structure:
+    ```python
+    gcs_2_gcs >> gcs_2_bq_ext >> bq_ext_2_part
+    ```
+    * The DAG will contain 3 tasks: reorganizing the files within the Data Lake for easier processing, creating the external tables based on the Data Lake files, and creatng a partitioned table from the external tables.
+1. Modify the imports slightly to import the corret operators we will use:
+    ```python
+    from airflow.providers.google.cloud.operators.bigquery import BigQueryCreateExternalTableOperator, BigQueryInsertJobOperator
+    from airflow.providers.google.cloud.transfers.gcs_to_gcs import GCStoGCSOperator
+    ```
+    * We already used the `BigQueryCreateExternalTableOperator` in the previous lesson. We also import `BigQueryInsertJobOperator` in order to be able to create partitioned tables.
+    * `GCStoGCSOperator` is used to organize the files within the Data Lake.
+1. Parametrize the filenames so that we can loop through all of the filenames. Wrap all tasks within the DAG in a `for` loop and loop through the taxi types.
+1. Create the `gcs_2_gcs` task.
+    * Use the `GCStoGCSOperator` operator. [Link to the official documentation](https://airflow.apache.org/docs/apache-airflow-providers-google/stable/_api/airflow/providers/google/cloud/transfers/gcs_to_gcs/index.html).
+    * We want to ***move*** multiple files. We will need to define the source bucket and objects as well as the destination bucket and objects.
+        * Both the source and destination buckets will be the same bucket we defined in lesson 2.
+        * Use f strings to change the source and destination object names on each loop.
+        * You may use the wildcard `*` in the source object filename, but be aware that _every character **before** the wildcard_ will be removed from the destination object filename.
+        * The destination object filename can be thought of as the prefix to be added to the source object filename.
+1. Create the `gcs_2_bq_ext` task.
+    * Modify the `BigQueryCreateExternalTableOperator` block. [Link to the official documentation](https://airflow.apache.org/docs/apache-airflow-providers-google/stable/_api/airflow/providers/google/cloud/operators/bigquery/index.html#airflow.providers.google.cloud.operators.bigquery.BigQueryCreateExternalTableOperator).
+    * The original code block let BQ decide the schema of the external table by infering from the input file with the `externalDataConfiguration` dict. It's possible to provide a schema if you know it beforehand; check the documentation for more info.
+    * Other than the `task_id`, this task is essentially the same code as last session's.
+1. Create the `bq_ext_2_part` task.
+    * Use the `BigQueryInsertJobOperator` operator. [Link to the official documentation](https://airflow.apache.org/docs/apache-airflow-providers-google/stable/_api/airflow/providers/google/cloud/operators/bigquery/index.html#airflow.providers.google.cloud.operators.bigquery.BigQueryInsertJobOperator).
+    * The operator needs a dict for the `configuration` parameter which needs to contain a SQL query. We will use a very similar query to the one we used in the [partitions section](#partitions) to create a table.
+
+The finalized `gcs_2_bq_dag.py` can be downloaded [from this link](../3_data_warehouse/airflow/dags/gcs_2_bq_dag.py).
+
+>Previous: [Data Warehouse](3_data_warehouse.md)
+
+>[Back to index](README.md)
+
+>Next: (Coming soon)
