@@ -32,7 +32,7 @@ What should be the start date for this dag?
 * 2021-01-01
 * days_ago(1)
 
->Answer:
+>Answer (correct):
 ```
 2019-01-01
 
@@ -49,7 +49,7 @@ How often do we need to run this DAG?
 * Yearly
 * Once
 
->Answer:
+>Answer (correct):
 ```
 Monthly
 
@@ -106,7 +106,7 @@ Question: how many DAG runs are green for data in 2019 after finishing everythin
 Note: when processing the data for 2020-01 you probably will get an error. It's up 
 to you to decide what to do with it - for Week 3 homework we won't need 2020 data.
 
->Answer:
+>Answer (correct):
 ```
 12 runs; all the months of 2019 worked fine
 ```
@@ -129,16 +129,13 @@ How often does it need to run?
 * Yearly
 * Once
 
->Answer:
+>Answer (correct):
 ```
 Once
 
 There is only one file to download.
 ```
 
-## Submitting the solutions
+## Extra
 
-* Form for submitting: TBA
-* You can submit your homework multiple times. In this case, only the last submission will be used. 
-
-Deadline: February 4, 22:00 CET 
+[Link to code with proposed solution](https://github.com/DataTalksClub/data-engineering-zoomcamp/raw/main/week_2_data_ingestion/homework/solution.py).

@@ -449,6 +449,50 @@ The status of each task can be seen in both views as you trigger a DAG.
 * A key design principle of tasks and DAGs is ***idempotency***. A task is ***idempotent*** if the end result is identical regardless of whether we run the task once or multiple times.
   * For example, if we create a DAG to handle ingestion to our database, the DAG is idempotent if the final table in the database is the same whether we run the DAG once or many times. If it created multiple duplicate tables or multiple records in a single table, then the DAG is NOT idempotent.
   * In our ingestion code, we managed idempotency by dropping any pre-existing databases and recreataing them from scratch.
+* You can define multiple DAGs in a single file. Remember that there are [multiple ways of declaring a DAG](https://airflow.apache.org/docs/apache-airflow/stable/concepts/dags.html#declaring-a-dag); we can use this to recycle code for multiple different DAGs:
+  * Define a function with all the arguments you may need such as filenames or buckets as well as a `dag` parameter, and inside the function declare the DAG with a context manager with all of your base tasks:
+    ```python
+    def my_cool_dag_function(dag, param_1, param_2, ...):
+      with dag:
+        task_1 = BashOperator(task_id=param_1, ...)
+        task_2 = PythonOperator(task_id=param_2, ...)
+        # ...
+        task_1 >> task_2 >> ...
+    ```
+  * Create as many DAG objects as you need using standard constructors:
+    ```python
+    first_dag = DAG(
+      dag_id='first_dag',
+      schedule_interval=@daily,
+      ...
+    )
+
+    second_dag = DAG(
+      dag_id='second_dag',
+      ...
+    )
+
+    # ...
+    ```
+  * Call your function as many times as the amount of DAGs you've defined and pass the DAG objects as params to your function.
+    ```python
+    my_cool_dag_function(
+      first_dag,
+      param_1=...,
+      param_2=...,
+      ...
+    )
+
+    my_cool_dag_function(
+      second_dag,
+      param_1=...,
+      param_2=...,
+      ...
+    )
+
+    #...
+    ```
+  * You can check an example DAG file with 3 DAGs [in this link](https://github.com/DataTalksClub/data-engineering-zoomcamp/raw/main/week_2_data_ingestion/homework/solution.py).
 
 _[Back to the top](#table-of-contents)_
 
