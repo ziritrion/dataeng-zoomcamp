@@ -636,6 +636,25 @@ ORDER BY
 ```
 * Similar to previous query but we now order by ascending order both by day and then drop off location ID, both in ascending order.
 
+As a final note, SQL commands can be categorized into the following categories:
+* ***DDL***: Data Definition Language.
+    * Define the database schema (create, modify, destroy)
+    * `CREATE`, `DROP`, `ALTER`, `TRUNCATE`, `COMMENT`, `RENAME`
+* ***DQL***: Data Query Language.
+    * Perform queries on the data within schema objects. Get data from the database and impose order upon it.
+    * `SELECT`
+* ***DML***: Data Manipulation Language.
+    * Manipulates data present in the database.
+    * `INSERT`, `UPDATE`, `DELETE`, `LOCK`...
+* ***DCL***: Data Control Language.
+    * Rights, permissions and other controls of the database system.
+    * Usually grouped with DML commands.
+    * `GRANT`, `REVOKE`
+* ***TCL***: Transaction Control Language.
+    * Transactions within the database.
+    * Not a universally considered category.
+    * `COMMIT`, `ROLLBACK`, `SAVEPOINT`, `SET TRANSACTION`
+
 _[Back to the top](#table-of-contents)_
 
 # Terraform and Google Cloud Platform
