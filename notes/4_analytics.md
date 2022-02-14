@@ -184,6 +184,8 @@ CREATE TABLE my_schema.my_model AS (
 
 After the code is compiled, dbt will run the compiled code in the Data Warehouse.
 
+Additional model properties are stored in YAML files. Traditionally, these files were named `schema.yml` but later versions of dbt do not enforce this as it could lead to confusion.
+
 ## The FROM clause
 
 The `FROM` clause within a `SELECT` statement defines the _sources_ of the data to be used.
@@ -259,3 +261,41 @@ WITH green_data AS (
 ```
 * The `ref()` function translates our references table into the full reference, using the `database.schema.table` structure.
 * If we were to run this code in our production environment, dbt would automatically resolve the reference to make ir point to our production schema.
+
+## Defining a source and creating a model
+
+We will now create our first model.
+
+We will begin by creating 2 new folders under our `models` folder:
+* `staging` will have the raw models.
+* `core` will have the models that we will expose at the end to the BI tool, stakeholders, etc.
+
+Under `staging` we will add 2 new files: `sgt_green_tripdata.sql` and `schema.yml`:
+```yaml
+# schema.yml
+
+version: 2
+
+sources:
+    - name: staging
+      database: your_project
+      schema: trips_data_all
+
+      tables:
+          - name: green_tripdata
+          - name: yellow_tripdata
+```
+* We define our ***sources*** in the `schema.yml` model properties file.
+* We are defining the 2 tables for yellow and green taxi data as our sources.
+```sql
+-- sgt_green_tripdata.sql
+
+{{ config(materialized='view') }}
+
+select * from {{ source('staging', 'green_tripdata') }}
+limit 100
+```
+* This query will create a ***view*** in the `staging` dataset/schema in our database.
+* We make use of the `source()` macro to access the green taxi data table.
+
+The advantage of having the properties in a separate file is that we can easily modify the `schema.yml` file to change the database details and write to different databases without having to modify our `sgt_green_tripdata.sql` file.
