@@ -203,6 +203,7 @@ The following sources are available to dbt models:
     * Seed usage:
         1. Add a CSV file to your `seeds` folder.
         1. Run the [`dbt seed` command](https://docs.getdbt.com/reference/commands/seed) to create a table in our Data Warehouse.
+            * If you update the content of a seed, running `dbt seed` will append the updated values to the table rather than substituing them. Running `dbt seed --full-refresh` instead will drop the old table and create a new one.
         1. Refer to the seed in your model with the `ref()` function.
     * More info about seeds [in this link](https://docs.getdbt.com/docs/building-a-dbt-project/seeds).
 
@@ -420,3 +421,36 @@ Variables can be used with the `var()` macro. For example:
 ```
 * In this example, the default value for `is_test_run` is `true`; in the absence of a variable definition either on the `dbt_project.yml` file or when running the project, then `is_test_run` would be `true`.
 * Since we passed the value `false` when runnning `dbt build`, then the `if` statement would evaluate to `false` and the code within would not run.
+
+# Referencing older models in new models
+
+>Note: you will need the [Taxi Zone Lookup Table seed](https://s3.amazonaws.com/nyc-tlc/misc/taxi+_zone_lookup.csv), the [staging models and schema](https://github.com/DataTalksClub/data-engineering-zoomcamp/tree/main/week_4_analytics_engineering/taxi_rides_ny/models/staging) and the [macro files](https://github.com/DataTalksClub/data-engineering-zoomcamp/tree/main/week_4_analytics_engineering/taxi_rides_ny/macros) for this section.
+
+The models we've created in the _staging area_ are for normalizing the fields of both green and yellow taxis. With normalized field names we can now join the 2 together in more complex ways.
+
+The `ref()` macro is used for referencing any undedrlying tables and views that we've created, so we can reference seeds as well as models using this macro:
+
+```sql
+{{ config(materialized='table') }}
+
+select
+    locationid,
+    borough,
+    zone,
+    replace(service_zone, 'Boro', 'Green') as service_zone
+from {{ ref('taxi_zone_lookup') }}
+```
+* This model references the `taxi_zone_lookup` table created from the taxi zone lookup CSV seed.
+
+```sql
+with green_data as (
+    select *, 
+        'Green' as service_type 
+    from {{ ref('stg_green_tripdata') }}
+), 
+```
+* This snippet references the `sgt_green_tripdata` model that we've created before. Since a model outputs a table/view, we can use it in the `FROM` clause of any query.
+
+You may check out these more complex "core" models [in this link](https://github.com/DataTalksClub/data-engineering-zoomcamp/tree/main/week_4_analytics_engineering/taxi_rides_ny/models/core).
+
+>Note: running `dbt run` will run all models but NOT the seeds. The `dbt build` can be used instead to run all seeds and models as well as tests, which we will cover later. Additionally, running `dbt run --select my_model` will only run the model itself, but running `dbt run --select +my_model` will run the model as well as all of its dependencies.
