@@ -326,7 +326,7 @@ Here's a macro definition example:
 ```sql
 {# This macro returns the description of the payment_type #}
 
-{% macro get_payment_type_description(payment_type) -%}
+{% macro get_payment_type_description(payment_type) %}
 
     case {{ payment_type }}
         when 1 then 'Credit card'
@@ -337,7 +337,7 @@ Here's a macro definition example:
         when 6 then 'Voided trip'
     end
 
-{%- endmacro %}
+{% endmacro %}
 ```
 * The `macro` keyword states that the line is a macro definition. It includes the name of the macro as well as the parameters.
 * The code of the macro itself goes between 2 statement delimiters. The second statement delimiter contains an `endmacro` keyword.
@@ -393,3 +393,30 @@ select
     cast(vendorid as integer) as vendorid,
     -- ...
 ```
+* The `surrogate_key()` macro generates a hashed [surrogate key](https://www.geeksforgeeks.org/surrogate-key-in-dbms/) with the specified fields in the arguments.
+
+## Variables
+
+Like most other programming languages, ***variables*** can be defined and used across our project.
+
+Variables can be defined in 2 different ways:
+* Under the `vars` keyword inside `dbt_project.yml`.
+    ```yaml
+    vars:
+        payment_type_values: [1, 2, 3, 4, 5, 6]
+    ```
+* As arguments when building or running your project.
+    ```sh
+    dbt build --m <your-model.sql> --var 'is_test_run: false'
+    ```
+
+Variables can be used with the `var()` macro. For example:
+```sql
+{% if var('is_test_run', default=true) %}
+
+    limit 100
+
+{% endif %}
+```
+* In this example, the default value for `is_test_run` is `true`; in the absence of a variable definition either on the `dbt_project.yml` file or when running the project, then `is_test_run` would be `true`.
+* Since we passed the value `false` when runnning `dbt build`, then the `if` statement would evaluate to `false` and the code within would not run.
