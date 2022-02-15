@@ -16,7 +16,8 @@ select
     store_and_fwd_flag,
     cast(passenger_count as integer) as passenger_count,
     cast(trip_distance as numeric) as trip_distance,
-    cast(trip_type as integer) as trip_type,
+    --cast(trip_type as integer) as trip_type,
+    1 as trip_type,
     
     -- payment info
     cast(fare_amount as numeric) as fare_amount,
