@@ -163,9 +163,9 @@ FROM staging.source_table
 WHERE record_state = 'ACTIVE'
 ```
 
-* In the Jinja statement defined within the `{{ }}` block we call the [`config()` macro](https://docs.getdbt.com/reference/dbt-jinja-functions/config).
+* In the Jinja statement defined within the `{{ }}` block we call the [`config()` function](https://docs.getdbt.com/reference/dbt-jinja-functions/config).
     * More info about Jinja macros for dbt [in this link](https://docs.getdbt.com/docs/building-a-dbt-project/jinja-macros).
-* We commonly use the `config()` macro at the beginning of a model to define a ***materialization strategy***: a strategy for persisting dbt models in a warehouse.
+* We commonly use the `config()` function at the beginning of a model to define a ***materialization strategy***: a strategy for persisting dbt models in a warehouse.
     * The `table` strategy means that the model will be rebuilt as a table on each run.
     * We could use a `view` strategy instead, which would rebuild the model on each run as a SQL view.
     * The `incremental` strategy is essentially a `table` strategy but it allows us to add or update records incrementally rather than rebuilding the complete table on each run.
@@ -193,8 +193,8 @@ The `FROM` clause within a `SELECT` statement defines the _sources_ of the data 
 The following sources are available to dbt models:
 
 * ***Sources***: The data loaded within our Data Warehouse.
-    * We can access this data with the `source()` macro.
-    * The `sources` key in our YAML file contains the details of the databases that the `source()` macro can access and translate into proper SQL-valid names.
+    * We can access this data with the `source()` function.
+    * The `sources` key in our YAML file contains the details of the databases that the `source()` function can access and translate into proper SQL-valid names.
         * Additionally, we can define "source freshness" to each source so that we can check whether a source is "fresh" or "stale", which can be useful to check whether our data pipelines are working properly.
     * More info about sources [in this link](https://docs.getdbt.com/docs/building-a-dbt-project/using-sources).
 * ***Seeds***: CSV files which can be stored in our repo under the `seeds` folder.
@@ -203,7 +203,7 @@ The following sources are available to dbt models:
     * Seed usage:
         1. Add a CSV file to your `seeds` folder.
         1. Run the [`dbt seed` command](https://docs.getdbt.com/reference/commands/seed) to create a table in our Data Warehouse.
-        1. Refer to the seed in your model with the `ref()` macro.
+        1. Refer to the seed in your model with the `ref()` function.
     * More info about seeds [in this link](https://docs.getdbt.com/docs/building-a-dbt-project/seeds).
 
 Here's an example of how you would declare a source in a `.yml` file:
@@ -240,7 +240,7 @@ SELECT
 FROM {{ ref('taxi_zone_lookup) }}
 ```
 
-The `ref()` macro references underlying tables and views in the Data Warehouse. When compiled, it will automatically build the dependencies and resolve the correct schema fo us. So, if BigQuery contains a schema/dataset called `dbt_dev` inside the `my_project` database which we're using for development and it contains a table called `stg_green_tripdata`, then the following code...
+The `ref()` function references underlying tables and views in the Data Warehouse. When compiled, it will automatically build the dependencies and resolve the correct schema fo us. So, if BigQuery contains a schema/dataset called `dbt_dev` inside the `my_project` database which we're using for development and it contains a table called `stg_green_tripdata`, then the following code...
 
 ```sql
 WITH green_data AS (
@@ -296,6 +296,9 @@ select * from {{ source('staging', 'green_tripdata') }}
 limit 100
 ```
 * This query will create a ***view*** in the `staging` dataset/schema in our database.
-* We make use of the `source()` macro to access the green taxi data table.
+* We make use of the `source()` function to access the green taxi data table, which is defined inside the `schema.yml` file.
 
 The advantage of having the properties in a separate file is that we can easily modify the `schema.yml` file to change the database details and write to different databases without having to modify our `sgt_green_tripdata.sql` file.
+
+## Macros
+
