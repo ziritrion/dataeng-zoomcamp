@@ -30,7 +30,7 @@ select
     cast(payment_type as integer) as payment_type,
     {{ get_payment_type_description('payment_type') }} as payment_type_description, 
     cast(congestion_surcharge as numeric) as congestion_surcharge
-from {{ source('staging', 'green_tripdata') }}
+from {{ source('staging', 'yellow_tripdata') }}
 where vendorid is not null
 
 {% if var('is_test_run', default=true) %}
