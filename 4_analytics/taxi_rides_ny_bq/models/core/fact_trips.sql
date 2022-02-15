@@ -44,7 +44,7 @@ select
     trips_unioned.mta_tax, 
     trips_unioned.tip_amount, 
     trips_unioned.tolls_amount, 
-    trips_unioned.ehail_fee, 
+    --trips_unioned.ehail_fee, 
     trips_unioned.improvement_surcharge, 
     trips_unioned.total_amount, 
     trips_unioned.payment_type, 
