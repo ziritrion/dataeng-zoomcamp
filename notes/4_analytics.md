@@ -422,7 +422,7 @@ Variables can be used with the `var()` macro. For example:
 * In this example, the default value for `is_test_run` is `true`; in the absence of a variable definition either on the `dbt_project.yml` file or when running the project, then `is_test_run` would be `true`.
 * Since we passed the value `false` when runnning `dbt build`, then the `if` statement would evaluate to `false` and the code within would not run.
 
-# Referencing older models in new models
+## Referencing older models in new models
 
 >Note: you will need the [Taxi Zone Lookup Table seed](https://s3.amazonaws.com/nyc-tlc/misc/taxi+_zone_lookup.csv), the [staging models and schema](https://github.com/DataTalksClub/data-engineering-zoomcamp/tree/main/week_4_analytics_engineering/taxi_rides_ny/models/staging) and the [macro files](https://github.com/DataTalksClub/data-engineering-zoomcamp/tree/main/week_4_analytics_engineering/taxi_rides_ny/macros) for this section.
 
@@ -454,3 +454,61 @@ with green_data as (
 You may check out these more complex "core" models [in this link](https://github.com/DataTalksClub/data-engineering-zoomcamp/tree/main/week_4_analytics_engineering/taxi_rides_ny/models/core).
 
 >Note: running `dbt run` will run all models but NOT the seeds. The `dbt build` can be used instead to run all seeds and models as well as tests, which we will cover later. Additionally, running `dbt run --select my_model` will only run the model itself, but running `dbt run --select +my_model` will run the model as well as all of its dependencies.
+
+# Testing and documenting dbt models
+
+Testing and documenting are not required steps to successfully run models, but they are expected in any professional setting.
+
+## Testing
+
+Tests in dbt are ***assumptions*** that we make about our data.
+
+In dbt, tests are essentially a `SELECT` query that will return the amount of records that fail because they do not follow the assumption defined by the test.
+
+Tests are defined on a column in the model YAML files (like the `schema.yml` file we defined before). dbt provides a few predefined tests to check column values but custom tests can also be created as queries. Here's an example test:
+
+```yaml
+models:
+  - name: stg_yellow_tripdata
+    description: >
+        Trips made by New York City's iconic yellow taxis. 
+    columns:
+        - name: tripid
+        description: Primary key for this table, generated with a concatenation of vendorid+pickup_datetime
+        tests:
+            - unique:
+                severity: warn
+            - not_null:
+                severrity: warn
+```
+* The tests are defined for a column in a specific table for a specific model.
+* There are 2 tests in this YAML file: `unique` and `not_null`. Both are predefined by dbt.
+* `unique` checks whether all the values in the `tripid` column are unique.
+* `not_null` checks whether all the values in the `tripid` column are not null.
+* Both tests will return a warning in the command line interface if they detect an error.
+
+Here's wwhat the `not_null` will compile to in SQL query form:
+
+```sql
+select *
+from "my_project"."dbt_dev"."stg_yellow_tripdata"
+```
+
+## Documentation
+
+dbt also provides a way to generate documentation for your dbt project and render it as a website.
+
+You may have noticed in the previous code block that a `description:` field can be added to the YAML field. dbt will make use of these fields to gather info.
+
+The dbt generated docs will include the following:
+* Information about the project:
+    * Model code (both from the .sql files and compiled code)
+    * Model dependencies
+    * Sources
+    * Auto generated DAGs from the `ref()` and `source()` macros
+    * Descriptions from the .yml files and tests
+* Information about the Data Warehouse (`information_schema`):
+    * Column names and data types
+    * Table stats like size and rows
+
+dbt docs can be generated on the cloud or locally, and can be hosted in dbt Cloud as well.
