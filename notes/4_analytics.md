@@ -494,6 +494,8 @@ select *
 from "my_project"."dbt_dev"."stg_yellow_tripdata"
 ```
 
+You may run tests with the `dbt test` command.
+
 ## Documentation
 
 dbt also provides a way to generate documentation for your dbt project and render it as a website.
@@ -512,3 +514,4 @@ The dbt generated docs will include the following:
     * Table stats like size and rows
 
 dbt docs can be generated on the cloud or locally, and can be hosted in dbt Cloud as well.
+
