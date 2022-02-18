@@ -8,7 +8,7 @@ with trips_data as (
     pickup_zone as revenue_zone,
     --date_trunc('month', pickup_datetime) as revenue_month, 
     --Note: For BQ use instead: date_trunc(pickup_datetime, month) as revenue_month, 
-    date_trunc(pickup_datetime, 'MONTH') as revenue_month, 
+    date_trunc(pickup_datetime, month) as revenue_month, 
 
     service_type, 
 
@@ -18,7 +18,7 @@ with trips_data as (
     sum(mta_tax) as revenue_monthly_mta_tax,
     sum(tip_amount) as revenue_monthly_tip_amount,
     sum(tolls_amount) as revenue_monthly_tolls_amount,
-    sum(ehail_fee) as revenue_monthly_ehail_fee,
+    --sum(ehail_fee) as revenue_monthly_ehail_fee,
     sum(improvement_surcharge) as revenue_monthly_improvement_surcharge,
     sum(total_amount) as revenue_monthly_total_amount,
     sum(congestion_surcharge) as revenue_monthly_congestion_surcharge,
