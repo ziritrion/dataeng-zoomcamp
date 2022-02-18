@@ -581,3 +581,21 @@ Under _Account settings_ > _Projects_, you may edit the project in order to modi
 In dbt Core, environments are defined in the `profiles.yml` file. Assuming you've defined a ***target*** (an environment) called `prod`, you may build your project agains it using the `dbt build -t prod` command.
 
 You may learn more about how to set up the `profiles.yml` file [in this link](https://docs.getdbt.com/dbt-cli/configure-your-profile).
+
+# Data visualization
+
+After creating our models, transforming the data and deploying the models, we will now ***visualize*** the data.
+
+## Google Data Studio
+
+[Google Data Studio](https://datastudio.google.com/) (GDS) is an online tool for converting data into reports and dashboards.
+
+In first place we will create a ***Data Source***. GDS supports multiple sources including BigQuery. After authorizing GDS to access BigQuery, we will be able to select our project and datasets. We will connect to our `production.fact_trips` schema.
+
+After creating the data source, a new window will open with the _dimensions_ (table columns), the type of each dimension and the default aggregation for each dimension. You may change the default aggregation as you see fit for each dimension.
+
+We will now create a ***Report*** by clicking on the _Create report_ button at the top of the Data Source window. A new window will open which will allow us to design our own custom report. An example table is already provided but you may delete it because we will be creating our own from scratch.
+
+## Metabase
+
+GDS cannot be used for local databases. If you're developing locally, you may use the [Open Source Edition](https://www.metabase.com/start/oss/) of [Metabase](https://www.metabase.com/)
