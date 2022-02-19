@@ -1,4 +1,4 @@
->Previous: [Data Warehouse](3_data_warehouse.md)
+>Previous: [Data Ingestion](2_data_ingestion.md)
 
 >[Back to index](README.md)
 
@@ -588,7 +588,7 @@ We will now create a new DAG inside the `dags` folder. In this example we will c
 
 The finalized `gcs_2_bq_dag.py` can be downloaded [from this link](../3_data_warehouse/airflow/dags/gcs_2_bq_dag.py).
 
->Previous: [Data Warehouse](3_data_warehouse.md)
+>Previous: [Data Ingestion](2_data_ingestion.md)
 
 >[Back to index](README.md)
 
