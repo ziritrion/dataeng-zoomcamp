@@ -2,6 +2,11 @@
   version: 2
 
 models:
+  - name: fact_fhv_trips
+    description: >
+      Taxi trips corresponding to For Hire Vehicles.
+      The table contains records where both pickup and dropoff locations are valid and known zones. 
+      Each record corresponds to a trip uniquely identified by tripid. 
   - name: dim_zones
     description: >
       List of unique zones idefied by locationid. 
@@ -11,7 +16,6 @@ models:
       Taxi trips corresponding to both service zones (Green and yellow).
       The table contains records where both pickup and dropoff locations are valid and known zones. 
       Each record corresponds to a trip uniquely identified by tripid. 
-      
   - name: dm_monthly_zone_revenue
     description: >
       Aggregated table of all taxi trips corresponding to both service zones (Green and yellow) per pickup zone, month and service.
