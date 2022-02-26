@@ -428,7 +428,7 @@ We can also count the amount of records per taxi type:
 df_trips_data.groupBy('service_type').count().show()
 ```
 
-## Querying a dataset
+## Querying a dataset with Temporary Tables
 
 We can make SQL queries with Spark with `spark.sqll("SELECT * FROM ???")`. SQL expects a table for retrieving records, but a dataframe is not a table, so we need to ***register*** the dataframe as a table first:
 
@@ -506,14 +506,49 @@ df_result.coalesce(1).write.parquet('data/report/revenue/', mode='overwrite')
 ```
 * This reduces the amount of partitions to just 1.
 
+# Spark internals
+
+## Spark Cluster
+
+Until now, we've used a ***local cluster*** to run our Spark code, but Spark clusters often contain multiple computers that behace as executors.
+
+Spark clusters are managed by a ***master***, which behaves similarly to an entry point of a Kubernetes cluster. A ***driver*** (an Airflow DAG, a computer running a local script, etc.) that wants to execute a Spark job will send the job to the master, which in turn will divide the work among the cluster's executors. If any executor fails and becomes offline for any reason, the master will reassign the task to another executor.
+
+```mermaid
+flowchart LR;
+    a[/"driver (Spark job)"\]--"spark-submit<br/>port 4040"-->master
+    subgraph cluster ["Spark cluster"]
+    master(["master"])
+    master-->e1{{executor}}
+    master-->e2{{executor}}
+    master-->e3{{executor}}
+    end
+    subgraph df ["Dataframe (in S3/GCS)"]
+    direction TB
+    p0[partition]
+    e1<-->p1[partition]:::running
+    e2<-->p2[partition]:::running
+    e3<-->p3[partition]:::running
+    p4[partition]
+    style p0 fill:#080
+    classDef running fill:#b70;
+    end
+```
+
+Each executor will fetch a ***dataframe partition*** stored in a ***Data Lake*** (usually S3, GCS or a similar cloud provider), do something with it and then store it somewhere, which could be the same Data Lake or somewhere else. If there are more partitions than executors, executors will keep fetching partitions until every single one has been processed.
+
+This is in contrast to [Hadoop](https://hadoop.apache.org/), another data analytics engine, whose executors locally store the data they process. Partitions in Hadoop are duplicated across several executors for redundancy, in case an executor fails for whatever reason (Hadoop is meant for clusters made of commodity hardware computers). However, data locality has become less important and nowadays it's feasible to separate storage from computation, so Hadoop has fallen out of fashion.
+
+## GroupBy in Spark
+
+
+
 ___
 
-
-## Temporary tables
-## Some simple queries from week 4
-
 # Joins in Spark
+## joining 2 large tables
 ## merge sort join
+## joining a large and a small table
 ## broadcasting
 
 # RDDs
