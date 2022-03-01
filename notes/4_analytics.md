@@ -2,7 +2,9 @@
 
 >[Back to index](README.md)
 
->Next: (Coming soon)
+>Next: [Batch Processing](5_batch_processing.md)
+
+>>Extra: [Preparing Data for Spark](extra1_preparing_data.md)
 
 ### Table of contents
 
@@ -708,4 +710,6 @@ _[Back to the top](#)_
 
 >[Back to index](README.md)
 
->Next: (Coming soon)
+>Next: [Batch Processing](5_batch_processing.md)
+
+>>Extra: [Preparing Data for Spark](extra1_preparing_data.md)

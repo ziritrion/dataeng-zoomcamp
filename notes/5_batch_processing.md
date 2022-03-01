@@ -1,3 +1,10 @@
+>Previous: [Analytics Engineering](4_analytics.md)
+
+>[Back to index](README.md)
+>>Extra: [Preparing Data for Spark](extra1_preparing_data.md)
+
+>Next: (Coming soon)
+
 # Introduction to Batch Processing
 
 _[Video source](https://www.youtube.com/watch?v=dcHe5Fl3MF8&list=PL3MmuxUbc_hJed7dXYoJw8DoCuVHhGEQb&index=46)_
@@ -71,6 +78,7 @@ A common workflow for batch jobs may be the following:
 
 However, the advantages of batch jobs often compensate for its shortcomings, and as a result most companies that deal with data tend to work with batch jobs mos of the time (probably 90%).
 
+_[Back to the top](#)_
 
 # Introduction to Spark
 
@@ -127,6 +135,8 @@ graph LR;
 
 In this scenario, most of the preprocessing would be happening in Athena, so for everything that can be expressed with SQL, it's always a good idea to do so, but for everything else, there's Spark.
 
+_[Back to the top](#)_
+
 # Installing Spark
 
 _[Video source](https://www.youtube.com/watch?v=hqUbB9c8sKg&list=PL3MmuxUbc_hJed7dXYoJw8DoCuVHhGEQb&index=48)_
@@ -137,11 +147,15 @@ After installing the appropiate JDK and Spark, make sure that you set up PySpark
 
 Test your install by running [this Jupiter Notebook](../5_batch_processing/03_test.ipynb).
 
+_[Back to the top](#)_
+
 # First look at Spark/PySpark
 
 >Note: if you're running Spark and Jupyter Notebook on a remote machine, you will need to redirect ports 8888 for Jupyter Notebook and 4040 for the Spark UI.
 
 ## Creating a Spark session
+
+_[Video Source](https://www.youtube.com/watch?v=r_Sf6fCB40c&list=PL3MmuxUbc_hJed7dXYoJw8DoCuVHhGEQb&index=50)_
 
 We can use Spark with Python code by means of PySpark. We will be using Jupyter Notebooks for this lesson.
 
@@ -166,6 +180,8 @@ spark = SparkSession.builder \
 * `getOrCreate()` will create the session or recover the object if it was previously created.
 
 Once we've instantiated a session, we can access the Spark UI by browsing to `localhost:4040`. The UI will display all current jobs. Since we've just created the instance, there should be no jobs currently running.
+
+_[Back to the top](#)_
 
 ## Reading CSV files
 
@@ -211,7 +227,11 @@ We can use a trick with Pandas to infer the datatypes:
 
 You may find an example Jupiter Notebook file using this trick [in this link](../5_batch_processing/04_pyspark.ipynb).
 
+_[Back to the top](#)_
+
 ## Partitions
+
+_[Video Source](https://www.youtube.com/watch?v=r_Sf6fCB40c&list=PL3MmuxUbc_hJed7dXYoJw8DoCuVHhGEQb&index=50)_
 
 A ***Spark cluster*** is composed of multiple ***executors***. Each executor can process data independently in order to parallelize and speed up work.
 
@@ -244,7 +264,11 @@ df.write.parquet('fhvhv/2021/01/', mode='overwrite')
 
 The opposite of partitioning (joining multiple partitions into a single partition) is called ***coalescing***.
 
+_[Back to the top](#)_
+
 ## Spark dataframes
+
+_[Video source](https://www.youtube.com/watch?v=ti3aC1m3rE8&list=PL3MmuxUbc_hJed7dXYoJw8DoCuVHhGEQb&index=51)_
 
 [As we said before](#reading-csv-files), Spark works with ***dataframes***.
 
@@ -273,7 +297,11 @@ There are many Pandas-like operations that we can do on Spark dataframes, such a
     ```
 * And many more. The official Spark documentation website contains a [quick guide for dataframes](https://spark.apache.org/docs/latest/api/python/getting_started/quickstart_df.html).
 
+_[Back to the top](#)_
+
 ## Actions vs Transformations
+
+_[Video source](https://www.youtube.com/watch?v=ti3aC1m3rE8&list=PL3MmuxUbc_hJed7dXYoJw8DoCuVHhGEQb&index=51)_
 
 Some Spark methods are "lazy", meaning that they are not executed right away. You can test this with the last instructions we run in the previous section: after running them, the Spark UI will not show any new jobs. However, running `df.show()` right after will execute right away and display the contents of the dataframe; the Spark UI will also show a new job.
 
@@ -304,7 +332,11 @@ List of actions (eager):
 * Write, read
 * ...
 
+_[Back to the top](#)_
+
 ## Functions and User Defined Functions (UDFs)
+
+_[Video source](https://www.youtube.com/watch?v=ti3aC1m3rE8&list=PL3MmuxUbc_hJed7dXYoJw8DoCuVHhGEQb&index=51)_
 
 Besides the SQL and Pandas-like commands we've seen so far, Spark provides additional built-in functions that allow for more complex data manipulation. By convention, these functions are imported as follows:
 
@@ -359,10 +391,14 @@ df \
     .show()
 ```
 
+_[Back to the top](#)_
+
 # Spark SQL
 
 We already mentioned at the beginning that there are other tools for expressing batch jobs as SQL queries. However, Spark can also run SQL queries, which can come in handy if you already have a Spark cluster and setting up an additional tool for sporadic use isn't desirable.
 ## Combining the 2 datasets
+
+_[Video source](https://www.youtube.com/watch?v=uAlp2VuZZPY&list=PL3MmuxUbc_hJed7dXYoJw8DoCuVHhGEQb&index=53)_
 
 >Note: this block makes use of the yellow and green taxi datasets for 2020 and 2021 as parquetized local files. You may create a DAG with Airflow [as seen on lesson 2](2_data_ingestion.md#creating-a-dag) or you may download and parquetize the files directly; [check out this extra lesson](extra1_preparing_data.md) to see how.
 
@@ -430,7 +466,11 @@ We can also count the amount of records per taxi type:
 df_trips_data.groupBy('service_type').count().show()
 ```
 
+_[Back to the top](#)_
+
 ## Querying a dataset with Temporary Tables
+
+_[Video source](https://www.youtube.com/watch?v=uAlp2VuZZPY&list=PL3MmuxUbc_hJed7dXYoJw8DoCuVHhGEQb&index=53)_
 
 We can make SQL queries with Spark with `spark.sqll("SELECT * FROM ???")`. SQL expects a table for retrieving records, but a dataframe is not a table, so we need to ***register*** the dataframe as a table first:
 
@@ -508,9 +548,13 @@ df_result.coalesce(1).write.parquet('data/report/revenue/', mode='overwrite')
 ```
 * This reduces the amount of partitions to just 1.
 
+_[Back to the top](#)_
+
 # Spark internals
 
 ## Spark Cluster
+
+_[Video source](https://www.youtube.com/watch?v=68CipcZt7ZA&list=PL3MmuxUbc_hJed7dXYoJw8DoCuVHhGEQb&index=54)_
 
 Until now, we've used a ***local cluster*** to run our Spark code, but Spark clusters often contain multiple computers that behace as executors.
 
@@ -540,7 +584,11 @@ Each executor will fetch a ***dataframe partition*** stored in a ***Data Lake***
 
 This is in contrast to [Hadoop](https://hadoop.apache.org/), another data analytics engine, whose executors locally store the data they process. Partitions in Hadoop are duplicated across several executors for redundancy, in case an executor fails for whatever reason (Hadoop is meant for clusters made of commodity hardware computers). However, data locality has become less important as storage and data transfer costs have dramatically decreased and nowadays it's feasible to separate storage from computation, so Hadoop has fallen out of fashion.
 
+_[Back to the top](#)_
+
 ## GROUP BY in Spark
+
+_[Video source](https://www.youtube.com/watch?v=9qrDsY_2COo&list=PL3MmuxUbc_hJed7dXYoJw8DoCuVHhGEQb&index=55)_
 
 Let's do the following query:
 
@@ -662,7 +710,11 @@ By default, Spark will repartition the dataframe to 200 partitions after shuffli
 Shuffling is an ***expensive operation***, so it's in our best interest to reduce the amount of data to shuffle when querying.
 * Keep in mind that repartitioning also involves shuffling data.
 
+_[Back to the top](#)_
+
 ## Joins in Spark
+
+_[Video source](https://www.youtube.com/watch?v=lu7TrqAWuH4&list=PL3MmuxUbc_hJed7dXYoJw8DoCuVHhGEQb&index=56)_
 
 Joining tables in Spark is implemented in a similar way to `GROUP BY` and `ORDER BY`, but there are 2 distinct cases: joining 2 large tables and joining a large table and a small table.
 
@@ -800,9 +852,17 @@ graph LR
 
 Shuffling isn't needed because each executor already has all of the necessary info to perform the join on each partition, thus speeding up the join operation by orders of magnitude.
 
+_[Back to the top](#)_
 
+>Previous: [Analytics Engineering](4_analytics.md)
+
+>[Back to index](README.md)
+>>Extra: [Preparing Data for Spark](extra1_preparing_data.md)
+
+>Next: (Coming soon)
 ___
 
+>Under construction
 
 # RDDs
 ## From DF to RDD

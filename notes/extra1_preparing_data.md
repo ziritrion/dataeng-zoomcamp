@@ -1,4 +1,10 @@
+ >[Back to Batch processing](5_batch_processing.md)
+
+ >[Back to Index](README.md)
+ 
  # Extra: preparing yellow and green taxi data
+
+ _[Video source](https://www.youtube.com/watch?v=CI3P4tAtru4&list=PL3MmuxUbc_hJed7dXYoJw8DoCuVHhGEQb&index=52)_
 
 In order to minimize the errors and discrepancies of the previous lessons' homework, we will create a script that downloads the [datasets](https://www1.nyc.gov/site/tlc/about/tlc-trip-record-data.page) for 2020 and 2021 and parquetizes them with a predefined schema.
 
@@ -59,6 +65,8 @@ After running the script, you may check the final folder structure with `tree`, 
 
 You may download a finished script [from this link](../5_batch_processing/download_data.sh).
 
+_[Back to the top](#)_
+
 ## Parquetize the datasets
 
 We will use the same [Pandas trick we saw in part 5 of lesson 4](5_batch_processing.md#reading-csv-files) to read the datasets, infer the schemas, partition the datasets and parquetize them.
@@ -114,3 +122,9 @@ yellow_schema = types.StructType([
 ```
 
 You may download a finished Jupyter Notebook script [from this file](../5_batch_processing/05_taxi_schema.ipynb).
+
+_[Back to the top](#)_
+
+ >[Back to Batch processing](5_batch_processing.md)
+
+ >[Back to Index](README.md)
