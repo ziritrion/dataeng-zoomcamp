@@ -8,7 +8,7 @@ Below you will find links to the notes for each lesson.
 * [Lesson 4: Analytics Engineering](4_analytics.md)
 * [Lesson 5: Batch Processing](5_batch_processing.md)
     * [Extra: Preparing data for Spark](extra1_preparing_data.md)
-* [Lesson 6: Streaming](06_streaming.md)
+* [Lesson 6: Streaming](6_streaming.md)
 
 Additionally, the following gists with cheatsheets are available.
 

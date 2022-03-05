@@ -3,7 +3,7 @@
 >[Back to index](README.md)
 >>Extra: [Preparing Data for Spark](extra1_preparing_data.md)
 
->Next: (Coming soon)
+>Next: [Streaming](6_streaming.md)
 
 # Introduction to Batch Processing
 
@@ -859,7 +859,7 @@ _[Back to the top](#)_
 >[Back to index](README.md)
 >>Extra: [Preparing Data for Spark](extra1_preparing_data.md)
 
->Next: (Coming soon)
+>Next: [Streaming](6_streaming.md)
 ___
 
 >Under construction
