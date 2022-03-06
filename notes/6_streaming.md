@@ -438,7 +438,44 @@ We will also create a [`consumer.py` file](../6_streaming/avro_example/consumer.
 
 When `producer.py` first created the topic and provided a schema, the registry associated that schema with the topic. By changing the schema, when the producer tries to subscribe to the same topic, the registry detects an incompatiblity because the new schema contains a string, but the scripts explicitly uses a `float` in `total_amount`, so it cannot proceed.
 
-# Kafka Stream
+# Kafka Streams
+
+_[Video source](https://www.youtube.com/watch?v=uuASDjCtv58&list=PL3MmuxUbc_hJed7dXYoJw8DoCuVHhGEQb&index=60)_
+
+## What is Kafka Streams?
+
+[Kafka Streams](https://kafka.apache.org/documentation/streams/) is a _client library_ for building applications and services whose input and output are stored in Kafka clusters. In other words: _Streams applications_ consume data from a Kafka topic and produce it back into another Kafka topic.
+
+Kafka Streams is fault-tolerant and scalable, and apps using the Streams library benefit from these features: new instances of the app can be added or killed and Kafka will balance the load accordingly. Streams can process events with latency of miliseconds, making it possible for applications to deal with messages as soon as they're available. Streams also provides a convenient [Domain Specific Language (Streams DSL)](https://docs.confluent.io/platform/current/streams/developer-guide/dsl-api.html) that simplifies the creation of Streams services.
+
+Kafka Streams is both powerful and simple to use. Other solutions like Spark or Flink are considered more powerful but they're much harder to use, and simple Kafka consumers (like the ones we've created so far) are simple but not as powerful as apps using Streams. However, keep in mind that Streams apps can only work with Kafka; if you need to deal with other sources then you need other solutions.
+
+## Streams vs State
+
+When dealing with streaming data, it's important to make the disctinction between these 2 concepts:
+
+* ***Streams*** (aka ***KStreams***) are _individual messages_ that are read sequentially.
+* ***State*** (aka ***KTable***) can be thought of as a _stream changelog_: essentially a table which contains a _view_ of the stream at a specific point of time.
+
+![source: https://timothyrenner.github.io/engineering/2016/08/11/kafka-streams-not-looking-at-facebook.html](images/06_04.png)
+
+## Streams topologies and features
+
+A ***topology*** (short for _processor topology_) defines the _stream computational logic_ for our app. In other words, it defines how input data is transformed into output data.
+
+Essentially, a topology is a graph of _stream processors_ (the graph nodes) which are connected by _streams_ (the graph edges). A topology is a useful abstraction to design and understand Streams applications.
+
+A ***stream processor*** is a node which represents a processing step (i.e. it transforms data), such as map, filter, join or aggregation.
+
+Stream processors (and thus topologies) are defined via the imperative Processor API or with the declarative, functional DSL. We will focus on DSL in this lesson.
+
+Kafka Streams provides a series of features which stream processors can take advantage of, such as:
+* Aggregates (count, groupby)
+* Stateful processing (stored internally in a Kafka topic)
+* Joins (KStream with Kstream, KStream with KTable, Ktable with KTable)
+* [Windows](https://kafka.apache.org/20/documentation/streams/developer-guide/dsl-api.html#windowing) (time based, session based)
+    * A window is a group of records that have the same key, meant for stateful operations such as aggregations or joins.
+
 
 ---
 
