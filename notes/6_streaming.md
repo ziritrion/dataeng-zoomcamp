@@ -440,7 +440,7 @@ When `producer.py` first created the topic and provided a schema, the registry a
 
 # Kafka Streams
 
-_[Video source](https://www.youtube.com/watch?v=uuASDjCtv58&list=PL3MmuxUbc_hJed7dXYoJw8DoCuVHhGEQb&index=60)_
+_Video sources: [1](https://www.youtube.com/watch?v=uuASDjCtv58&list=PL3MmuxUbc_hJed7dXYoJw8DoCuVHhGEQb&index=60), [2](https://www.youtube.com/watch?v=dTzsDM9myr8&list=PL3MmuxUbc_hJed7dXYoJw8DoCuVHhGEQb&index=63)_
 
 ## What is Kafka Streams?
 
@@ -456,6 +456,7 @@ When dealing with streaming data, it's important to make the disctinction betwee
 
 * ***Streams*** (aka ***KStreams***) are _individual messages_ that are read sequentially.
 * ***State*** (aka ***KTable***) can be thought of as a _stream changelog_: essentially a table which contains a _view_ of the stream at a specific point of time.
+    * KTables are also stored as topics in Kafka.
 
 ![source: https://timothyrenner.github.io/engineering/2016/08/11/kafka-streams-not-looking-at-facebook.html](images/06_04.png)
 
@@ -476,6 +477,83 @@ Kafka Streams provides a series of features which stream processors can take adv
 * [Windows](https://kafka.apache.org/20/documentation/streams/developer-guide/dsl-api.html#windowing) (time based, session based)
     * A window is a group of records that have the same key, meant for stateful operations such as aggregations or joins.
 
+## Kafka Streams Demo (1)
+
+The native language to develop for Kafka Streams is Scala; we will use the [Faust library](https://faust.readthedocs.io/en/latest/) instead because it allows us to create Streams apps with Python.
+
+1. `producer_tax_json.py` ([link](../6_streaming/streams/producer_tax_json.py)) will be the main producer.
+    * Instead of sending Avro messages, we will send simple JSON messages for simplicity.
+    * We instantiate a `KafkaProducer` object, read from the CSV file used in the previous block, create a key with `numberId` matching the row of the CSV file and the value is a JSON object with the values in the row.
+    * We post to the `datatalkclub.yellow_taxi_ride.json` topic.
+        * You will need to create this topic in the Control Center.
+    * One message is sent per second, as in the previous examples.
+    
+1. `stream.py` ([link](../6_streaming/streams/stream.py)) is the actual Faust application.
+    * We first instantiate a `faust.App` object which declares the _app id_ (like the consumer group id) and the Kafka broker which we will talk to.
+    * We also define a topic, which is `datatalkclub.yellow_taxi_ride.json`.
+        * The `value_types` param defines the datatype of the message value; we've created a custom `TaxiRide` class for it which is available [in this `taxi_ride.py` file](../6_streaming/streams/taxi_rides.py)
+    * We create a _stream processor_ called `start_reading()` using the `@app.agent()` decorator.
+        * In Streams, and ***agent*** is a group of ***actors*** processing a stream, and an _actor_ is an individual instance.
+        * We use `@app.agent(topic)` to point out that the stream processor will deal with our `topic` object.
+        * `start_reading(records)` receives a stream named `records` and prints every message in the stream as it's received.
+        * Finally, we call the `main()` method of our `faust.App` object as an entry point.
+1. `stream_count_vendor_trips.py` ([link](../6_streaming/streams/stream_count_vendor_trips.py)) is another Faust app that showcases creating a state from a stream:
+    * Like the previous app, we instantiate an `app` object and a topic.
+    * We also create a KTable with `app.Table()` in order to keep a state:
+        * The `default=int` param ensures that whenever we access a missing key in the table, the value for that key will be initialized as such (since `int()` returns 0, the value will be initialized to 0).
+    * We create a stream processor called `process()` which will read every message in `stream` and write to the KTable.
+        * We use `group_by()` to _repartition the stream_ by `TaxiRide.vendorId`, so that every unique `vendorId` is delivered to the same agent instance.
+        * We write to the KTable the number of messages belonging to each `vendorId`, increasing the count by one each time we read a message. By using `group_by` we make sure that the KTable that each agent handles contains the correct message count per each `vendorId`.
+* `branch_price.py` ([link](../6_streaming/streams/branch_price.py)) is a Faust app that showcases ***branching***:
+    * We start by instancing an app object and a _source_ topic which is, as before, `datatalkclub.yellow_taxi_ride.json`.
+    * We also create 2 additional new topics: `datatalks.yellow_taxi_rides.high_amount` and `datatalks.yellow_taxi_rides.low_amount`
+    * In our stream processor, we check the `total_amount` value of each message and ***branch***:
+        * If the value is below the `40` threshold, the message is reposted to the `datatalks.yellow_taxi_rides.low_amount` topic.
+        * Otherwise, the message is reposted to `datatalks.yellow_taxi_rides.high_amount`.
+
+## Joins in Streams
+
+Streams support the following Joins:
+* ***Outer***
+* ***Inner***
+* ***Left***
+
+Tables and streams can also be joined in different combinations:
+* ***Stream to stream join*** - always ***windowed*** (you need to specify a certain timeframe).
+* ***Table to table join*** - always NOT windowed.
+* ***Stream to table join***.
+
+You may find out more about how they behave [in this link](https://blog.codecentric.de/en/2017/02/crossing-streams-joins-apache-kafka/).
+
+The main difference is that joins between streams are _windowed_ ([see below](#windowing)), which means that the joins happen between the "temporal state" of the window, whereas joins between tables aren't windowed and thus happen on the actual contents of the tables.
+
+## Timestamps
+
+So far we have covered the key and value attributes of a Kafka message but we have not covered the timestamp.
+
+Every event has an associated notion of time. Kafka Streams bases joins and windows on these notions. We actually have multiple timestamps available depending on our use case:
+* ***Event time*** (extending `TimestampExtractor`): timestamp built into the message which we can access and recover.
+* ***Processing time***: timestamp in which the message is processed by the stream processor.
+* ***Ingestion time***: timestamp in which the message was ingested into its Kafka broker.
+
+## Windowing
+
+In Kafka Streams, ***windows*** refer to a time reference in which a series of events happen.
+
+There are 2 main kinds of windows:
+
+* ***Time-based windows***
+    * ***Fixed/tumbling***: windows have a predetermined size (in seconds or whichever time unit is adequate for the use case) and don't overlap - each window happens one after another.
+    * ***Sliding***: windows have a predetermined size but there may be multiple "timelines" (or _slides_) happening at the same time. Windows for each slide have consecutive windows.
+* ***Session-based windows***: windows are based on keys rather than absolute time. When a key is received, a _session window_ starts for that key and ends when needed. Multiple sessions may be open simultaneously.
+
+## Kafka Streams demo (2) - windowing
+
+Let's now see an example of windowing in action.
+
+* `windowing.py` ([link](../6_streaming/streams/windowing.py)) is a very similar app to `stream_count_vendor_trips.py` but defines a ***tumbling window*** for the table.
+    * The window will be of 1 minute in length.
+    * When we run the app and check the window topic in Control Center, we will see that each key (one per window) has an attached time interval for the window it belongs to and the value will be the key for each received message during the window.
 
 ---
 
