@@ -440,7 +440,7 @@ When `producer.py` first created the topic and provided a schema, the registry a
 
 # Kafka Streams
 
-_Video sources: [1](https://www.youtube.com/watch?v=uuASDjCtv58&list=PL3MmuxUbc_hJed7dXYoJw8DoCuVHhGEQb&index=60), [2](https://www.youtube.com/watch?v=dTzsDM9myr8&list=PL3MmuxUbc_hJed7dXYoJw8DoCuVHhGEQb&index=63)_
+_Video sources: [1](https://www.youtube.com/watch?v=uuASDjCtv58&list=PL3MmuxUbc_hJed7dXYoJw8DoCuVHhGEQb&index=60), [2](https://www.youtube.com/watch?v=dTzsDM9myr8&list=PL3MmuxUbc_hJed7dXYoJw8DoCuVHhGEQb&index=63), [3](https://www.youtube.com/watch?v=d8M_-ZbhZls&list=PL3MmuxUbc_hJed7dXYoJw8DoCuVHhGEQb&index=65)_
 
 ## What is Kafka Streams?
 
@@ -497,6 +497,7 @@ The native language to develop for Kafka Streams is Scala; we will use the [Faus
         * We use `@app.agent(topic)` to point out that the stream processor will deal with our `topic` object.
         * `start_reading(records)` receives a stream named `records` and prints every message in the stream as it's received.
         * Finally, we call the `main()` method of our `faust.App` object as an entry point.
+    * You will need to run this script as `python stream.py worker` .
 1. `stream_count_vendor_trips.py` ([link](../6_streaming/streams/stream_count_vendor_trips.py)) is another Faust app that showcases creating a state from a stream:
     * Like the previous app, we instantiate an `app` object and a topic.
     * We also create a KTable with `app.Table()` in order to keep a state:
@@ -504,12 +505,14 @@ The native language to develop for Kafka Streams is Scala; we will use the [Faus
     * We create a stream processor called `process()` which will read every message in `stream` and write to the KTable.
         * We use `group_by()` to _repartition the stream_ by `TaxiRide.vendorId`, so that every unique `vendorId` is delivered to the same agent instance.
         * We write to the KTable the number of messages belonging to each `vendorId`, increasing the count by one each time we read a message. By using `group_by` we make sure that the KTable that each agent handles contains the correct message count per each `vendorId`.
+    * You will need to run this script as `python stream_count_vendor_trips.py worker` .
 * `branch_price.py` ([link](../6_streaming/streams/branch_price.py)) is a Faust app that showcases ***branching***:
     * We start by instancing an app object and a _source_ topic which is, as before, `datatalkclub.yellow_taxi_ride.json`.
     * We also create 2 additional new topics: `datatalks.yellow_taxi_rides.high_amount` and `datatalks.yellow_taxi_rides.low_amount`
     * In our stream processor, we check the `total_amount` value of each message and ***branch***:
         * If the value is below the `40` threshold, the message is reposted to the `datatalks.yellow_taxi_rides.low_amount` topic.
         * Otherwise, the message is reposted to `datatalks.yellow_taxi_rides.high_amount`.
+    * You will need to run this script as `python branch_price.py worker` .
 
 ## Joins in Streams
 
@@ -554,6 +557,57 @@ Let's now see an example of windowing in action.
 * `windowing.py` ([link](../6_streaming/streams/windowing.py)) is a very similar app to `stream_count_vendor_trips.py` but defines a ***tumbling window*** for the table.
     * The window will be of 1 minute in length.
     * When we run the app and check the window topic in Control Center, we will see that each key (one per window) has an attached time interval for the window it belongs to and the value will be the key for each received message during the window.
+    * You will need to run this script as `python windowing.py worker` .
+
+## Additional Streams features
+
+Many of the following features are available in the official Streams library for the JVM but aren't available yet in alternative libraries such as Faust.
+
+### Stream tasks and threading model
+
+In Kafka Streams, each topic partition is handled by a ***task***. Tasks can be understood as a mechanism for Kafka to handle parallelism, regardless of the amount of computing ***threads*** available to the machine.
+
+![tasks](images/06_05.jpeg)
+
+Kafka also allows us to define the amount of threads to use. State is NOT shared within threads even if they run in a single instance; this allows us to treat threads within an instance as if they were threads in separate machines. Scalability is handled by the Kafka cluster.
+
+![tasks](images/06_06.png)
+⬇︎
+![tasks](images/06_07.png)
+
+### Joins
+
+In Kafka Streams, join topics should have the _same partition count_.
+
+Remember that joins are based on keys, and partitions are assigned to instances. When doing realtime joins, identical keys between the 2 topics will be assigned to the same partition, as shown in the previous image.
+
+If you're joining external topics and the partitions don't match, you may need to create new topics recreating the data and repartition these new topics as needed. In Spark this wouldn't be necessary.
+
+### Global KTable
+
+A ***global KTable*** is a KTable that acts like a _broadcast variable_. All partitions of a global KTable are stored in all Kafka instances.
+
+The benefits of global KTables are more convenient and effective joins and not needing to co-partition data, but the drawbacks are increased local storage and network load. Ideally, global KTables should be reserved for smaller data.
+
+### Interactive queries
+
+Let's assume that you have a Kafka Streams app which captures events from Kafka and you also have another app which would benefit from querying the data of your Streams app. Normally, you'd use an external DB to write from your Streams app and the other apps would query the DB.
+
+***Interactive queries*** is a feature that allows external apps to query your Streams app directly, without needing an external DB.
+
+Assuming that you're running multiple instances of your Streams app, when an external app requests a key to the Streams app, the load balancer will fetch the key from the appropiate Streams app instance and return it to the external app. This can be achieved thanks to the _Interactive queries-RPC API_.
+* `KafkaStreams#allMetadata()`
+* `KafkaStreams#allMetadataForStore(String storeName)`
+* `KafkaStreams#metadataForKey(String storeName, K key, Serializer<K> keySerializer)`
+* `KafkaStreams#metadataForKey(String storeName, K key, StreamPartitioner<K, ?> partitiones)`
+
+### Processing guarantees
+
+Depending on your needs, you may specify the message ***processing guarantee***:
+* At least once: messages will be read but the system will not check for duplicates.
+* Exactly once: records are processed once, even if the producer sends duplicate records.
+
+You can find more about processing guarantees and their applications [in this link](https://docs.confluent.io/platform/current/streams/concepts.html#:~:text=the%20Developer%20Guide.-,Processing%20Guarantees,and%20exactly%2Donce%20processing%20guarantees.&text=Records%20are%20never%20lost%20but,read%20and%20therefore%20re%2Dprocessed.).
 
 ---
 
