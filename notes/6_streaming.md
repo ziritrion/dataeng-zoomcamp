@@ -1,3 +1,62 @@
+>Previous: [Batch Processing](5_batch_processing.md)
+
+>[Back to index](README.md)
+
+>Next: Coming soong
+
+### Table of contents
+
+- [Introduction to Streaming](#introduction-to-streaming)
+- [Introduction to Apache Kafka](#introduction-to-apache-kafka)
+  - [What is Kafka?](#what-is-kafka)
+  - [Basic Kafka components](#basic-kafka-components)
+    - [Message](#message)
+    - [Topic](#topic)
+    - [Broker and Cluster](#broker-and-cluster)
+    - [Logs](#logs)
+    - [Intermission: visualizing the concepts so far](#intermission-visualizing-the-concepts-so-far)
+    - [`__consumer_offsets`](#__consumer_offsets)
+    - [Consumer Groups](#consumer-groups)
+    - [Partitions](#partitions)
+    - [Replication](#replication)
+  - [Kafka configurations](#kafka-configurations)
+    - [Topic configurations](#topic-configurations)
+    - [Consumer configurations](#consumer-configurations)
+    - [Producer configurations](#producer-configurations)
+- [Kafka install and demo](#kafka-install-and-demo)
+  - [Installing Kafka](#installing-kafka)
+  - [Demo - Setting up a producer and consumer](#demo---setting-up-a-producer-and-consumer)
+- [Avro and Schema Registry](#avro-and-schema-registry)
+  - [Why are schemas needed?](#why-are-schemas-needed)
+  - [Introduction to Avro](#introduction-to-avro)
+  - [Schema compatibility](#schema-compatibility)
+  - [Avro schema evolution](#avro-schema-evolution)
+  - [Schema registry](#schema-registry)
+  - [Dealing with incompatible schemas](#dealing-with-incompatible-schemas)
+  - [Avro demo](#avro-demo)
+    - [`docker-compose.yml`](#docker-composeyml)
+    - [Defining schemas](#defining-schemas)
+    - [Producer](#producer)
+    - [Consumer](#consumer)
+    - [Run the demo](#run-the-demo)
+- [Kafka Streams](#kafka-streams)
+  - [What is Kafka Streams?](#what-is-kafka-streams)
+  - [Streams vs State](#streams-vs-state)
+  - [Streams topologies and features](#streams-topologies-and-features)
+  - [Kafka Streams Demo (1)](#kafka-streams-demo-1)
+  - [Joins in Streams](#joins-in-streams)
+  - [Timestamps](#timestamps)
+  - [Windowing](#windowing)
+  - [Kafka Streams demo (2) - windowing](#kafka-streams-demo-2---windowing)
+  - [Additional Streams features](#additional-streams-features)
+    - [Stream tasks and threading model](#stream-tasks-and-threading-model)
+    - [Joins](#joins)
+    - [Global KTable](#global-ktable)
+    - [Interactive queries](#interactive-queries)
+    - [Processing guarantees](#processing-guarantees)
+- [Kafka Connect](#kafka-connect)
+- [KSQL](#ksql)
+
 # Introduction to Streaming
 
 # Introduction to Apache Kafka
@@ -27,6 +86,8 @@ Kafka works by allowing producers to send ***messages*** which are then pushed i
 Kafka is hugely popular and most technology-related companies use it.
 
 _You can also check out [this animated comic](https://www.gentlydownthe.stream/) to learn more about Kafka._
+
+_[Back to the top](#)_
 
 ## Basic Kafka components
 
@@ -182,6 +243,8 @@ If a broker which contains a leader partition dies, another broker becomes the l
 
 We can define the _replication factor_ of partitions at topic level. A replication factor of 1 (no replicas) is undesirable, because if the leader broker dies, then the partition becomes unavailable to the whole system, which could be catastrophic in certain applications.
 
+_[Back to the top](#)_
+
 ## Kafka configurations
 
 _[Video source](https://www.youtube.com/watch?v=Erf1-d1nyMY&list=PL3MmuxUbc_hJed7dXYoJw8DoCuVHhGEQb&index=58)_
@@ -214,6 +277,8 @@ This section will cover different settings and properties accross Kafka actors.
     * `all`: the producer waits for the leader and all replica brokers to write the message to disk.
         * Safest but slowest policy. Useful for data-sensitive applications which cannot afford to lose messages, but speed will have to be taken into account.
 
+_[Back to the top](#)_
+
 # Kafka install and demo
 
 ## Installing Kafka
@@ -235,6 +300,8 @@ Due to the complexity of managing a manual Kafka install, a docker-compose scrip
 
 Download the script to your work directory and start the deployment with `docker-compose up` . It may take several minutes to deploy on the first run. Check the status of the deployment with `docker ps` . Once the deployment is complete, access the control center GUI by browsing to `localhost:9021` .
 
+_[Back to the top](#)_
+
 ## Demo - Setting up a producer and consumer
 
 We will now create a demo of a Kafka system with a producer and a consumer and see how messages are created and consumed.
@@ -250,6 +317,8 @@ We will now create a demo of a Kafka system with a producer and a consumer and s
 1. With the `consumer.py` running, modify the script and change `group_id` to `'consumer.group.id.demo.2'`. Run the script on a separate terminal; you should now see how it consumes all messages starting from the beginning because `auto_offset_reset` is set to `earliest` and we now have 2 separate consumer groups accessing the same topic.
 1. On yet another terminal, run the `consumer.py` script again. The consumer group `'consumer.group.id.demo.2'` should now have 2 consumers. If you check the terminals, you should now see how each consumer receives separate messages because the second consumer has been assigned a partition, so each consumer receives the messages for their partitions only.
 1. Finally, run a 3rd consumer. You should see no activity for this consumer because the topic only has 2 partitions, so no partitions can be assigned to the idle consumer.
+
+_[Back to the top](#)_
 
 # Avro and Schema Registry
 
@@ -270,6 +339,8 @@ flowchart LR
 
 In order to solve this, we can introduce a ***schema*** to the data so that producers can define the kind of data they're pushing and consumers can understand it.
 
+_[Back to the top](#)_
+
 ## Introduction to Avro
 
 ***[Avro](https://avro.apache.org/)*** is a ***data serialization system*** .
@@ -285,6 +356,8 @@ These features result in 3 main advantages:
 * Avro clients provide ***automatic validation*** against schemas. If you try to push an incompatible schema between versions, the Kafka Avro client will not allow you to do so.
 
 Avro is supported by Kafka. Protobuf is also supported but we will focus on Avro for this lesson.
+
+_[Back to the top](#)_
 
 ## Schema compatibility
 
@@ -315,6 +388,8 @@ We can think of the _relationship_ between producers and consumers as a ***contr
 
 A ***schema registry*** is such a system. The schema registry contains the schemas we define for our messages. Avro fetches the schema for each message and validates that any changes to the schema registry are compatible with previous versions.
 
+_[Back to the top](#)_
+
 ## Avro schema evolution
 
 We can define 3 different kinds of evolutions for schemas:
@@ -324,6 +399,8 @@ We can define 3 different kinds of evolutions for schemas:
 * ***Mixed/hybrid versions***: ideal condition where schemas are both forward and backward compatible.
 
 ![source: https://inakianduaga.github.io/kafka-image-processor/#/3](images/06_03.png)
+
+_[Back to the top](#)_
 
 ## Schema registry
 
@@ -349,6 +426,8 @@ flowchart LR
 3. The producer starts sending messages to the ABC topic using the v1 schema to a Kafka broker.
 
 When the consumer wants to consume from a topic, it checks with the schema registry which version to use. If there are multiple schema versions and they're all compatible, then the consumer could use a different schema than the producer.
+
+_[Back to the top](#)_
 
 ## Dealing with incompatible schemas
 
@@ -378,6 +457,8 @@ flowchart LR
     t1 --> s3 & s4
     t2 --> s1 & s2
 ```
+
+_[Back to the top](#)_
 
 ## Avro demo
 
@@ -438,6 +519,8 @@ We will also create a [`consumer.py` file](../6_streaming/avro_example/consumer.
 
 When `producer.py` first created the topic and provided a schema, the registry associated that schema with the topic. By changing the schema, when the producer tries to subscribe to the same topic, the registry detects an incompatiblity because the new schema contains a string, but the scripts explicitly uses a `float` in `total_amount`, so it cannot proceed.
 
+_[Back to the top](#)_
+
 # Kafka Streams
 
 _Video sources: [1](https://www.youtube.com/watch?v=uuASDjCtv58&list=PL3MmuxUbc_hJed7dXYoJw8DoCuVHhGEQb&index=60), [2](https://www.youtube.com/watch?v=dTzsDM9myr8&list=PL3MmuxUbc_hJed7dXYoJw8DoCuVHhGEQb&index=63), [3](https://www.youtube.com/watch?v=d8M_-ZbhZls&list=PL3MmuxUbc_hJed7dXYoJw8DoCuVHhGEQb&index=65)_
@@ -450,6 +533,8 @@ Kafka Streams is fault-tolerant and scalable, and apps using the Streams library
 
 Kafka Streams is both powerful and simple to use. Other solutions like Spark or Flink are considered more powerful but they're much harder to use, and simple Kafka consumers (like the ones we've created so far) are simple but not as powerful as apps using Streams. However, keep in mind that Streams apps can only work with Kafka; if you need to deal with other sources then you need other solutions.
 
+_[Back to the top](#)_
+
 ## Streams vs State
 
 When dealing with streaming data, it's important to make the disctinction between these 2 concepts:
@@ -459,6 +544,8 @@ When dealing with streaming data, it's important to make the disctinction betwee
     * KTables are also stored as topics in Kafka.
 
 ![source: https://timothyrenner.github.io/engineering/2016/08/11/kafka-streams-not-looking-at-facebook.html](images/06_04.png)
+
+_[Back to the top](#)_
 
 ## Streams topologies and features
 
@@ -476,6 +563,8 @@ Kafka Streams provides a series of features which stream processors can take adv
 * Joins (KStream with Kstream, KStream with KTable, Ktable with KTable)
 * [Windows](https://kafka.apache.org/20/documentation/streams/developer-guide/dsl-api.html#windowing) (time based, session based)
     * A window is a group of records that have the same key, meant for stateful operations such as aggregations or joins.
+
+_[Back to the top](#)_
 
 ## Kafka Streams Demo (1)
 
@@ -514,6 +603,8 @@ The native language to develop for Kafka Streams is Scala; we will use the [Faus
         * Otherwise, the message is reposted to `datatalks.yellow_taxi_rides.high_amount`.
     * You will need to run this script as `python branch_price.py worker` .
 
+_[Back to the top](#)_
+
 ## Joins in Streams
 
 Streams support the following Joins:
@@ -530,6 +621,8 @@ You may find out more about how they behave [in this link](https://blog.codecent
 
 The main difference is that joins between streams are _windowed_ ([see below](#windowing)), which means that the joins happen between the "temporal state" of the window, whereas joins between tables aren't windowed and thus happen on the actual contents of the tables.
 
+_[Back to the top](#)_
+
 ## Timestamps
 
 So far we have covered the key and value attributes of a Kafka message but we have not covered the timestamp.
@@ -538,6 +631,8 @@ Every event has an associated notion of time. Kafka Streams bases joins and wind
 * ***Event time*** (extending `TimestampExtractor`): timestamp built into the message which we can access and recover.
 * ***Processing time***: timestamp in which the message is processed by the stream processor.
 * ***Ingestion time***: timestamp in which the message was ingested into its Kafka broker.
+
+_[Back to the top](#)_
 
 ## Windowing
 
@@ -550,6 +645,8 @@ There are 2 main kinds of windows:
     * ***Sliding***: windows have a predetermined size but there may be multiple "timelines" (or _slides_) happening at the same time. Windows for each slide have consecutive windows.
 * ***Session-based windows***: windows are based on keys rather than absolute time. When a key is received, a _session window_ starts for that key and ends when needed. Multiple sessions may be open simultaneously.
 
+_[Back to the top](#)_
+
 ## Kafka Streams demo (2) - windowing
 
 Let's now see an example of windowing in action.
@@ -558,6 +655,8 @@ Let's now see an example of windowing in action.
     * The window will be of 1 minute in length.
     * When we run the app and check the window topic in Control Center, we will see that each key (one per window) has an attached time interval for the window it belongs to and the value will be the key for each received message during the window.
     * You will need to run this script as `python windowing.py worker` .
+
+_[Back to the top](#)_
 
 ## Additional Streams features
 
@@ -609,11 +708,15 @@ Depending on your needs, you may specify the message ***processing guarantee***:
 
 You can find more about processing guarantees and their applications [in this link](https://docs.confluent.io/platform/current/streams/concepts.html#:~:text=the%20Developer%20Guide.-,Processing%20Guarantees,and%20exactly%2Donce%20processing%20guarantees.&text=Records%20are%20never%20lost%20but,read%20and%20therefore%20re%2Dprocessed.).
 
+_[Back to the top](#)_
+
 # Kafka Connect
 
 [Kafka Connect](https://docs.confluent.io/platform/current/connect/index.html#:~:text=Kafka%20Connect%20is%20a%20free,Kafka%20Connect%20for%20Confluent%20Platform.) is a tool which allows us to stream data between external applications and services to/from Kafka. It works by defining ***connectors*** which external services connect to. Services from which data is pulled from are called ***sources*** and services which we send data to are called ***sinks***.
 
 ![kafla connect](images/06_08.png)
+
+_[Back to the top](#)_
 
 # KSQL
 
@@ -624,3 +727,11 @@ You can find more about processing guarantees and their applications [in this li
 KSQL offers consumers such as Data Scientists a tool for analyzing Kafka streams: instead of having to rely on Data Engineers to deliver consumable data to a Data Warehouse, Scientists can now directly query Kafka to generate consumable data on the fly.
 
 However, KSQL isn't mature yet and lacks many useful features for Data Engineers (are the topics formatted with Avro, or are they JSON or just strings? How do you maintain the code? Do we need to manage a resource-intensive KSQL cluster just for occasional queries? etc.)
+
+_[Back to the top](#)_
+
+>Previous: [Batch Processing](5_batch_processing.md)
+
+>[Back to index](README.md)
+
+>Next: Coming soong
