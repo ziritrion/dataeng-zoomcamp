@@ -854,6 +854,24 @@ Shuffling isn't needed because each executor already has all of the necessary in
 
 _[Back to the top](#)_
 
+# Resilient Distributed Datasets (RDDs)
+
+## RDDs: Map and Reduce
+### What are RDDs? How do they relate to dataframes?
+
+***Resilient Distributed Datasets*** (RDDs) are the main abstraction provided by Spark and consist of collection of elements partitioned accross the nodes of the cluster.
+
+Dataframes are actually built on top of RDDs and contain a schema as well, which plain RDDs do not.
+
+### From Dataframe to RDD
+### Operations on RDDs: map, filter, reduceByKey
+### From RDD to Dataframe
+
+## Spark RDD mapPartition
+
+
+_[Back to the top](#)_
+
 >Previous: [Analytics Engineering](4_analytics.md)
 
 >[Back to index](README.md)
@@ -863,13 +881,6 @@ _[Back to the top](#)_
 ___
 
 >Under construction
-
-# RDDs
-## From DF to RDD
-## map
-## reduce
-## mapPartition
-## From RDD to DF
 
 # Spark and Docker
 
