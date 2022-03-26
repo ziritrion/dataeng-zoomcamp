@@ -23,6 +23,7 @@ Topic which compact messages based on Key
 
 * Beginning in topic
 * Latest in topic
+* From a particular offset ( https://developer.confluent.io/tutorials/kafka-console-consumer-read-specific-offsets-partitions/confluent.html )
 
 ## **Q7**: What key structure is seen when producing messages via 10 minutes Tumbling window in Kafka stream?
 
