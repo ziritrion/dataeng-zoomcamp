@@ -40,10 +40,39 @@ resource "google_storage_bucket" "data-lake-bucket" {
   force_destroy = true
 }
 
-# DWH
+/* # DWH
 # Ref: https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/bigquery_dataset
 resource "google_bigquery_dataset" "dataset" {
   dataset_id = var.BQ_DATASET
   project    = var.project
   location   = var.region
 }
+
+# Airflow
+# Ref: https://cloud.google.com/composer/docs/composer-2/create-environments#terraform_5
+resource "google_composer_environment" "airflow" {
+  name = var.composer_name
+  region = var.region
+
+  config {
+    software_config {
+      image_version = var.composer_image
+    }
+
+    node_config {
+      service_account = var.service_account
+    }
+
+    # Environment scale is optional, the default small setup should suffice
+
+    # Networking on public IP environment is the default
+
+    # web server network access should also be public
+
+    # maintenance window should be the default
+
+    # Data encryption should also be the default
+
+    # Environment labels aren't needed
+  }
+} */
