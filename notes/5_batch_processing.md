@@ -857,6 +857,9 @@ _[Back to the top](#)_
 # Resilient Distributed Datasets (RDDs)
 
 ## RDDs: Map and Reduce
+
+_[Video source](https://www.youtube.com/watch?v=Bdu-xIrF3OM&list=PL3MmuxUbc_hJed7dXYoJw8DoCuVHhGEQb&index=57)_
+
 ### What are RDDs? How do they relate to dataframes?
 
 ***Resilient Distributed Datasets*** (RDDs) are the main abstraction provided by Spark and consist of collection of elements partitioned accross the nodes of the cluster.
@@ -864,10 +867,137 @@ _[Back to the top](#)_
 Dataframes are actually built on top of RDDs and contain a schema as well, which plain RDDs do not.
 
 ### From Dataframe to RDD
+
+Spark dataframes contain a `rdd` field which contains the raw RDD of the dataframe. The RDD's objects used for the dataframe are called ***rows***.
+
+Let's take a look once again at the SQL query we saw in the [GROUP BY section](#group-by-in-spark):
+
+```sql
+SELECT 
+    date_trunc('hour', lpep_pickup_datetime) AS hour, 
+    PULocationID AS zone,
+
+    SUM(total_amount) AS amount,
+    COUNT(1) AS number_records
+FROM
+    green
+WHERE
+    lpep_pickup_datetime >= '2020-01-01 00:00:00'
+GROUP BY
+    1, 2
+```
+
+We can re-implement this query with RDD's instead:
+
+1. We can re-implement the `SELECT` section by choosing the 3 fields from the RDD's rows.
+
+    ```python
+    rdd = df_green \
+        .select('lpep_pickup_datetime', 'PULocationID', 'total_amount') \
+        .rdd
+    ```
+
+1. We can implement the `WHERE` section by using the `filter()` and `take()` methods:
+    * `filter()` returns a new RDD cointaining only the elements that satisfy a _predicate_, which in our case is a function that we pass as a parameter.
+    * `take()` takes as many elements from the RDD as stated.
+    ```python
+    from datetime import datetime
+
+    start = datetime(year=2020, month=1, day=1)
+
+    def filter_outliers(row):
+        return row.lpep_pickup_datetime >= start
+
+    rdd.filter(filter_outliers).take(1)
+    ```
+
+The `GROUP BY` is more complex and makes use of special methods.
 ### Operations on RDDs: map, filter, reduceByKey
+
+1. We need to generate _intermediate results_ in a very similar way to the original SQL query, so we will need to create the _composite key_ `(hour, zone)` and a _composite value_ `(amount, count)`, which are the 2 halves of each record that the executors will generate. Once we have a function that generates the record, we will use the `map()` method, which takes an RDD, transforms it with a function (our key-value function) and returns a new RDD.
+    ```python
+    def prepare_for_grouping(row): 
+        hour = row.lpep_pickup_datetime.replace(minute=0, second=0, microsecond=0)
+        zone = row.PULocationID
+        key = (hour, zone)
+        
+        amount = row.total_amount
+        count = 1
+        value = (amount, count)
+
+        return (key, value)
+    
+
+    rdd \
+        .filter(filter_outliers) \
+        .map(prepare_for_grouping)
+    ```
+1. We now need to use the `reduceByKey()` method, which will take all records with the same key and put them together in a single record by transforming all the different values according to some rules which we can define with a custom function. Since we want to count the total amount and the total number of records, we just need to add the values:
+    ```python
+    # we get 2 value tuples from 2 separate records as input
+    def calculate_revenue(left_value, right_value):
+        # tuple unpacking
+        left_amount, left_count = left_value
+        right_amount, right_count = right_value
+        
+        output_amount = left_amount + right_amount
+        output_count = left_count + right_count
+        
+        return (output_amount, output_count)
+    
+    rdd \
+        .filter(filter_outliers) \
+        .map(prepare_for_grouping) \
+        .reduceByKey(calculate_revenue)
+    ```
+1. The output we have is already usable but not very nice, so we map the output again in order to _unwrap_ it.
+    ```python
+    from collections import namedtuple
+    RevenueRow = namedtuple('RevenueRow', ['hour', 'zone', 'revenue', 'count'])
+    def unwrap(row):
+        return RevenueRow(
+            hour=row[0][0], 
+            zone=row[0][1],
+            revenue=row[1][0],
+            count=row[1][1]
+        )
+
+    rdd \
+        .filter(filter_outliers) \
+        .map(prepare_for_grouping) \
+        .reduceByKey(calculate_revenue) \
+        .map(unwrap)
+    ```
+    * Using `namedtuple` isn't necessary but it will help in the next step.
+
 ### From RDD to Dataframe
 
+Finally, we can take the resulting RDD and convert it to a dataframe with `toDF()`. We will need to generate a schema first because we lost it when converting RDDs:
+```python
+from pyspark.sql import types
+
+result_schema = types.StructType([
+    types.StructField('hour', types.TimestampType(), True),
+    types.StructField('zone', types.IntegerType(), True),
+    types.StructField('revenue', types.DoubleType(), True),
+    types.StructField('count', types.IntegerType(), True)
+])
+
+df_result = rdd \
+    .filter(filter_outliers) \
+    .map(prepare_for_grouping) \
+    .reduceByKey(calculate_revenue) \
+    .map(unwrap) \
+    .toDF(result_schema) 
+```
+* We can use `toDF()` without any schema as an input parameter, but Spark will have to figure out the schema by itself which may take a substantial amount of time. Using `namedtuple` in the previous step allows Spark to infer the column names but Spark will still need to figure out the data types; by passing a schema as a parameter we skip this step and get the output much faster.
+
+As you can see, manipulating RDDs to perform SQL-like queries is complex and time-consuming. Ever since Spark added support for dataframes and SQL, manipulating RDDs in this fashion has become obsolete, but since dataframes are built on top of RDDs, knowing how they work can help us understand how to make better use of Spark.
+
 ## Spark RDD mapPartition
+
+_[Video source](https://www.youtube.com/watch?v=k3uB2K99roI&list=PL3MmuxUbc_hJed7dXYoJw8DoCuVHhGEQb&index=58)_
+
 
 
 _[Back to the top](#)_
