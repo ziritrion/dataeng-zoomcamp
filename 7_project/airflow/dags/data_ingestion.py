@@ -5,19 +5,21 @@ from airflow import DAG
 from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
 
+from airflow.providers.google.cloud.operators.bigquery import BigQueryCreateExternalTableOperator, BigQueryInsertJobOperator
+
 from datetime import datetime
 
 from google.cloud import storage
 
 PROJECT_ID = os.environ.get("GCP_PROJECT_ID")
 BUCKET = os.environ.get("GCP_GCS_BUCKET")
+DATASET = "gh"
+BIGQUERY_DATASET = os.environ.get("BIGQUERY_DATASET", 'gh_archive_all')
 
 url_prefix = 'https://data.gharchive.org/'
 file_template = '{{ execution_date.strftime(\'%Y-%m-%d-%-H\') }}.json.gz'
 url = url_prefix + file_template
 path_to_local_home = os.environ.get("AIRFLOW_HOME", "/opt/airflow/")
-
-
 
 default_args = {
     "owner": "airflow",
@@ -70,9 +72,25 @@ with DAG(
         },
     )
 
+    gcs_2_bq_ext_task = BigQueryCreateExternalTableOperator(
+        task_id=f"bq_{DATASET}_external_table_task",
+        table_resource={
+            "tableReference": {
+                "projectId": PROJECT_ID,
+                "datasetId": BIGQUERY_DATASET,
+                "tableId": f"{DATASET}_external_table",
+            },
+            "externalDataConfiguration": {
+                "autodetect": "True",
+                "sourceFormat": "NEWLINE_DELIMITED_JSON",
+                "sourceUris": [f"gs://{BUCKET}/*"],
+            },
+        },
+    )
+
     remove_files_task = BashOperator(
         task_id="remove_files_task",
         bash_command=f"rm {path_to_local_home}/{file_template}"
     )
 
-    download_dataset_task >> local_to_gcs_task >> remove_files_task
+    download_dataset_task >> local_to_gcs_task >> gcs_2_bq_ext_task  >> remove_files_task
