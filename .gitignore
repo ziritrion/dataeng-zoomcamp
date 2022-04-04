@@ -13,3 +13,8 @@ private/*
 3_data_warehouse/airflow/dags/*
 3_data_warehouse/airflow/logs/*
 3_data_warehouse/airflow/plugins/*
+
+7_project/airflow/dags/*
+7_project/airflow/logs/*
+7_project/airflow/plugins/*
+7_project/terraform/
