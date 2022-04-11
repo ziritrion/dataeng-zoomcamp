@@ -18,3 +18,6 @@ private/*
 7_project/airflow/logs/*
 7_project/airflow/plugins/*
 7_project/terraform/
+
+*.json
+*.json.gz
