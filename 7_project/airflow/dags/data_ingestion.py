@@ -248,7 +248,7 @@ with DAG(
 
     remove_files_task = BashOperator(
         task_id="remove_files_task",
-        bash_command=f"rm {path_to_local_home}/{file_template}"
+        bash_command=f"rm {path_to_local_home}/{file_template} {path_to_local_home}/{parquet_file}"
     )
 
     download_dataset_task >> format_to_parquet_task >> local_to_gcs_task >> gcs_2_bq_ext_task  >> remove_files_task
