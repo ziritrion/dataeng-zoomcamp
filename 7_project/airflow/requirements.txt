@@ -1,1 +1,5 @@
 apache-airflow-providers-google
+fastparquet
+pandas
+glom
+gzip

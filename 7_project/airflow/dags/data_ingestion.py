@@ -11,6 +11,11 @@ from datetime import datetime
 
 from google.cloud import storage
 
+import pandas as pd
+from glom import glom
+import json
+import gzip
+
 PROJECT_ID = os.environ.get("GCP_PROJECT_ID")
 BUCKET = os.environ.get("GCP_GCS_BUCKET")
 DATASET = "gh"
@@ -18,6 +23,7 @@ BIGQUERY_DATASET = os.environ.get("BIGQUERY_DATASET", 'gh_archive_all')
 
 url_prefix = 'https://data.gharchive.org/'
 file_template = '{{ execution_date.strftime(\'%Y-%m-%d-%-H\') }}.json.gz'
+parquet_file = file_template.replace('.json.gz', '.parquet')
 url = url_prefix + file_template
 path_to_local_home = os.environ.get("AIRFLOW_HOME", "/opt/airflow/")
 
@@ -26,6 +32,146 @@ default_args = {
     "depends_on_past": False,
     "retries": 1,
 }
+
+spec = {
+    'id':'id',
+    'type':'type',
+    'actor_id':'actor.id',
+    'actor_login':'actor.login',
+    'actor_gravatar_id':'actor.gravatar_id',
+    'actor_url':'actor.url',
+    'actor_avatar_url':'actor.avatar_url',
+    'repo_id':'repo.id',
+    'repo_name':'repo.name',
+    'repo_url':'repo.url',
+    #'payload':'payload',
+    'public':'public',
+    'created_at':'created_at'
+}
+
+spec_org = {
+    'id':'id',
+    'type':'type',
+    'actor_id':'actor.id',
+    'actor_login':'actor.login',
+    'actor_gravatar_id':'actor.gravatar_id',
+    'actor_url':'actor.url',
+    'actor_avatar_url':'actor.avatar_url',
+    'repo_id':'repo.id',
+    'repo_name':'repo.name',
+    'repo_url':'repo.url',
+    #'payload':'payload',
+    'public':'public',
+    'created_at':'created_at',
+    'org_id':'org.id',
+    'org_login':'org.login',
+    'org_gravatar_id':'org.gravatar_id',
+    'org_avatar_url':'org.avatar_url',
+    'org_url':'org.url'
+}
+
+schema = [
+    {
+        "name": "id",
+        "type": "STRING",
+        "description": "Unique event ID"
+    },
+    {
+        "name": "type",
+        "type": "STRING",
+        "description": "https://developer.github.com/v3/activity/events/types/"
+    },
+    {
+        "name":"actor_id",
+        "type": "INTEGER",
+        "description": "Numeric ID of the GitHub actor"
+    },
+    {
+        "name": "actor_login",
+        "type": "STRING",
+        "description": "Actor's GitHub login"
+    },
+    {
+        "name": "actor_gravatar_id",
+        "type": "STRING",
+        "description": "Actor's Gravatar ID"
+    },
+    {
+        "name": "actor_url",
+        "type": "STRING",
+        "description": "Actor's profile URL"
+    },
+    {
+        "name": "actor_avatar_url",
+        "type": "STRING",
+        "description": "Actor's Gravatar URL"
+    },
+    {
+        "name": "repo_id",
+        "type": "INTEGER",
+        "description": "Numeric ID of the GitHub repository"
+    },
+    {
+        "name": "repo_name",
+        "type": "STRING",
+        "description": "Repository name"
+    },
+    {
+        "name": "repo_url",
+        "type": "STRING",
+        "description": "Repository URL"
+    },
+    {
+        "name": "public",
+        "type": "BOOLEAN",
+        "description": "Always true for this dataset since only public activity is recorded."
+    },
+    {
+        "name": "created_at",
+        "type": "TIMESTAMP",
+        "description": "Timestamp of associated event"
+    },
+    {
+        "name": "org_id",
+        "type": "INTEGER",
+        "description": "Numeric ID of the GitHub org"
+    },
+    {
+        "name": "org_login",
+        "type": "STRING",
+        "description": "Org's GitHub login"
+    },
+    {
+        "name": "org_gravatar_id",
+        "type": "STRING",
+        "description": "Org's Gravatar ID"
+    },
+    {
+        "name": "org_avatar_url",
+        "type": "STRING",
+        "description": "Org's Gravatar URL"
+    },
+    {
+        "name": "org_url",
+        "type": "STRING",
+        "description": "Org's profile URL"
+    }
+]
+
+def format_to_parquet(src_file):
+    if not src_file.endswith('.json.gz'):
+        logging.error("Can only accept source files in json.gz format, for the moment")
+        return
+    data = []
+    with gzip.open(src_file, 'rt', encoding='UTF-8') as f:
+        for line in f:
+            j_content = json.loads(line)
+            if j_content.get('org') is None:
+                d_line = glom (j_content, spec)
+            else:
+                d_line = glom(j_content, spec_org)
+            data.append(d_line)
+    pd.DataFrame(data).to_parquet(src_file.replace('.json.gz', '.parquet'))
 
 def upload_to_gcs(bucket, object_name, local_file):
     """
@@ -62,13 +208,21 @@ with DAG(
         bash_command=f'curl -sSLf {url} > {path_to_local_home}/{file_template}'
     )
 
+    format_to_parquet_task = PythonOperator(
+        task_id = "format_to_parquet_task",
+        python_callable=format_to_parquet,
+        op_kwargs={
+            "src_file": f"{path_to_local_home}/{file_template}",
+        },
+    )
+
     local_to_gcs_task = PythonOperator(
         task_id="local_to_gcs_task",
         python_callable=upload_to_gcs,
         op_kwargs={
             "bucket": BUCKET,
             "object_name": f"raw/{file_template}",
-            "local_file": f"{path_to_local_home}/{file_template}",
+            "local_file": f"{path_to_local_home}/{parquet_file}",
         },
     )
 
@@ -81,124 +235,7 @@ with DAG(
                 "tableId": f"{DATASET}_external_table",
             },
             "schema": {
-                "fields": [
-                    {
-                        "name": "type",
-                        "type": "STRING",
-                        "description": "https://developer.github.com/v3/activity/events/types/"
-                    },
-                    {
-                        "name": "public",
-                        "type": "BOOLEAN",
-                        "description": "Always true for this dataset since only public activity is recorded."
-                    },
-                    {
-                        "name": "payload",
-                        "type": "STRING",
-                        "description": "Event payload in JSON format"
-                    },
-                    {
-                        "name": "repo",
-                        "type": "RECORD",
-                        "description": "Repository associated with the event",
-                        "fields": [
-                            {
-                                "name": "id",
-                                "type": "INTEGER",
-                                "description": "Numeric ID of the GitHub repository"
-                            },
-                            {
-                                "name": "name",
-                                "type": "STRING",
-                                "description": "Repository name"
-                            },
-                            {
-                                "name": "url",
-                                "type": "STRING",
-                                "description": "Repository URL"
-                            }
-                        ]
-                    },
-                    {
-                        "name": "actor",
-                        "type": "RECORD",
-                        "description": "Actor generating the event",
-                        "fields": [
-                            {
-                                "name": "id",
-                                "type": "INTEGER",
-                                "description": "Numeric ID of the GitHub actor"
-                            },
-                            {
-                                "name": "login",
-                                "type": "STRING",
-                                "description": "Actor's GitHub login"
-                            },
-                            {
-                                "name": "gravatar_id",
-                                "type": "STRING",
-                                "description": "Actor's Gravatar ID"
-                            },
-                            {
-                            "name": "avatar_url",
-                            "type": "STRING",
-                            "description": "Actor's Gravatar URL"
-                            },
-                            {
-                            "name": "url",
-                            "type": "STRING",
-                            "description": "Actor's profile URL"
-                            }
-                        ]
-                    },
-                    {
-                        "name": "org",
-                        "type": "RECORD",
-                        "description": "GitHub org of the associated repo",
-                        "fields": [
-                            {
-                                "name": "id",
-                                "type": "INTEGER",
-                                "description": "Numeric ID of the GitHub org"
-                            },
-                            {
-                                "name": "login",
-                                "type": "STRING",
-                                "description": "Org's GitHub login"
-                            },
-                            {
-                                "name": "gravatar_id",
-                                "type": "STRING",
-                                "description": "Org's Gravatar ID"
-                            },
-                            {
-                                "name": "avatar_url",
-                                "type": "STRING",
-                                "description": "Org's Gravatar URL"
-                            },
-                            {
-                                "name": "url",
-                                "type": "STRING",
-                                "description": "Org's profile URL"
-                            }
-                        ]
-                    },
-                    {
-                        "name": "created_at",
-                        "type": "TIMESTAMP",
-                        "description": "Timestamp of associated event"
-                    },
-                    {
-                        "name": "id",
-                        "type": "STRING",
-                        "description": "Unique event ID"
-                    },
-                    {
-                        "name": "other",
-                        "type": "STRING",
-                        "description": "Unknown fields in JSON format"
-                    }
-                ]
+                "fields": schema
             },
             "externalDataConfiguration": {
                 "autodetect": "True",
@@ -214,4 +251,4 @@ with DAG(
         bash_command=f"rm {path_to_local_home}/{file_template}"
     )
 
-    download_dataset_task >> local_to_gcs_task >> gcs_2_bq_ext_task  >> remove_files_task
+    download_dataset_task >> format_to_parquet_task >> local_to_gcs_task >> gcs_2_bq_ext_task  >> remove_files_task
