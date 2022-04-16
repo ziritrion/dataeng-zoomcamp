@@ -167,7 +167,7 @@ def format_to_parquet(src_file):
         for line in f:
             j_content = json.loads(line)
             if j_content.get('org') is None:
-                d_line = glom (j_content, spec)
+                d_line = glom(j_content, spec)
             else:
                 d_line = glom(j_content, spec_org)
             data.append(d_line)
@@ -196,7 +196,7 @@ def upload_to_gcs(bucket, object_name, local_file):
 with DAG(
     dag_id="gh_data_ingestion",
     schedule_interval="30 * * * *",
-    start_date=datetime(2022, 3, 25),
+    start_date=datetime(2022, 4, 1),
     default_args=default_args,
     catchup=True,
     max_active_runs=3,
