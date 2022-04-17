@@ -171,7 +171,10 @@ def format_to_parquet(src_file):
             else:
                 d_line = glom(j_content, spec_org)
             data.append(d_line)
-    pd.DataFrame(data).to_parquet(src_file.replace('.json.gz', '.parquet'))
+    df = pd.DataFrame(data)
+    df = df.mask(df == '') # replace empty values with NaN
+    df.created_at = pd.to_datetime(df.created_at) # make sure that timestamp is correct
+    df.to_parquet(src_file.replace('.json.gz', '.parquet'))
 
 def upload_to_gcs(bucket, object_name, local_file):
     """
