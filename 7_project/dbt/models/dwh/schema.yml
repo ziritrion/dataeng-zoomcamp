@@ -1,0 +1,9 @@
+version: 2
+sources:
+ - name: gh_archive_all
+   tables:
+     - name: gh_external_table
+       location: 'gs://data_lake_gh-archive-345218/raw/*'
+       options:
+         format: parquet
+         hive_partition_uri_prefix: 'gs://bucket/path/'

@@ -1,0 +1,11 @@
+# schema.yml
+
+version: 2
+
+sources:
+    - name: staging
+      database: gh-archive-345218
+      schema: gh_archive_all
+
+      tables:
+          - name: gh_external_table
