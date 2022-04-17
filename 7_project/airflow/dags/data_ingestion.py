@@ -133,7 +133,7 @@ schema = [
     },
     {
         "name": "org_id",
-        "type": "INTEGER",
+        "type": "FLOAT64",
         "description": "Numeric ID of the GitHub org"
     },
     {
