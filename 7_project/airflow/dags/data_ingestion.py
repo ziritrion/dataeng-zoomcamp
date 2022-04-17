@@ -221,7 +221,7 @@ with DAG(
         python_callable=upload_to_gcs,
         op_kwargs={
             "bucket": BUCKET,
-            "object_name": f"raw/{file_template}",
+            "object_name": f"raw/{parquet_file}",
             "local_file": f"{path_to_local_home}/{parquet_file}",
         },
     )
@@ -239,8 +239,7 @@ with DAG(
             },
             "externalDataConfiguration": {
                 "autodetect": "True",
-                "sourceFormat": "NEWLINE_DELIMITED_JSON",
-                "compression": "GZIP",
+                "sourceFormat": "PARQUET",
                 "sourceUris": [f"gs://{BUCKET}/raw/*"],
             },
         },
