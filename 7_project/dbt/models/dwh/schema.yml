@@ -11,6 +11,6 @@ sources:
           hive_partition_uri_prefix: 'gs://bucket/path/'
 
 models:
-  - name: days
+  - name: dwh_days
     description: >
       GitHub activity partitioned by days.
