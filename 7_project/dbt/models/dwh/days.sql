@@ -4,9 +4,10 @@
             "field": "created_at",
             "data_type": "timestamp",
             "granularity": "day"
-        }
+        },
+        schema='dwh'
     )
 }}
 
 SELECT *
-FROM {{ source('gh_archive_all', 'gh_external_table') }}
+FROM {{ source('dwh', 'gh_external_table') }}

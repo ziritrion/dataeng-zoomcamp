@@ -33,4 +33,3 @@ clean-targets:         # directories to be removed by `dbt clean`
 # using the `{{ config(...) }}` macro.
 models:
   gh-archive:
-    # Applies to all files under models/example/
