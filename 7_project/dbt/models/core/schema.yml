@@ -1,0 +1,6 @@
+version: 2
+
+models:
+  - name: users
+    description: >
+      Users that pushed commits
