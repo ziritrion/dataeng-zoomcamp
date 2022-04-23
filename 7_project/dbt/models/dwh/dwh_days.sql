@@ -5,6 +5,7 @@
             "data_type": "timestamp",
             "granularity": "day"
         },
+        cluster_by = "actor_id",
         schema='dwh'
     )
 }}
