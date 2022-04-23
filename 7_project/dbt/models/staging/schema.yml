@@ -1,11 +1,12 @@
-# schema.yml
-
 version: 2
-
 sources:
-    - name: staging
-      database: gh-archive-345218
-      schema: gh_archive_all
+  - name: staging
+    database: gh-archive-345218
+    schema: dbt_dwh
+    tables:
+        - name: dwh_days
 
-      tables:
-          - name: gh_external_table
+models:
+  - name: stg_commits
+    description: >
+      GitHub commits
