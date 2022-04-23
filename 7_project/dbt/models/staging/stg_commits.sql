@@ -1,4 +1,4 @@
-{{ config(materialized='view') }}
+{{ config(materialized='view', schema='staging') }}
 
 select * from {{ source('staging', 'dwh_days')}}
-where 'type' = 'PushEvent'
+where type = 'PushEvent'
