@@ -276,24 +276,69 @@ The DAG is set up to download all data starting from April 1st 2022. You may cha
 
 To trigger the DAG, simply click on the switch icon next to the DAG name. The DAG will retrieve all data from the starting date to the latest available hour and then perform hourly checks on every 30 minute mark.
 
-After the data ingestion, you may shut down Airflow by pressing `Ctrl+C` on the terminal running Airflow and then running `docker-compose down`.
-
-You may also shut down the VM because it won't be needed for the following steps.
+After the data ingestion, you may shut down Airflow by pressing `Ctrl+C` on the terminal running Airflow and then running `docker-compose down`, or you may keep Airflow running if you want to update the dataset every hour. If you shut down Airflow, you may also shut down the VM instance because it won't be needed for the following steps.
 
 ## Setting up dbt Cloud
 
+1. Create a [dbt CLoud account](https://www.getdbt.com/).
+1. Create a new project.
+    1. Give it a name (`gh-archive` is recommended), and under _Advanced settings_, input `7_project/dbt` as the _Project subdirectory_.
+    1. Choose _BigQuery_ as a database connection.
+    1. Choose the following settings:
+        * You may leave the default connection name.
+        * Upload a Service Account JSON file > choose the `google_credentials.json` we created previously.
+        * Under _BigQuery Optional Settings_, make sure that you put your Google Cloud location under _Location_.
+        * Under _Development credentials_, choose any name for the dataset. This name will be added as a prefix to the schemas. In this project the name `dbt` was used.
+        * Test the connection and click on _Continue_ once the connection is tested successfully.
+    1. In the _Add repository from_ form, click on Github and choose your fork from your user account. Alternatively, you may provide a URL and clone the repo.
+1. Once the project has been created, you should now be able to click on the hamburger menu on the top left and click on _Develop_ to load the dbt Cloud IDE.
 
+You may now run the `dbt run` command in the bottom prompt to run all models; this will generate 3 different datasets in BigQuery:
+* `<prefix>_dwh` hosts the data warehouse materialized table with all of the ingested data.
+* `<prefix>_staging` hosts the staging views for generating the final end-user tables.
+* `<prefix>_core` hosts the end-user tables.
 
+## Deploying models in dbt Cloud with a Production environment
 
-# Airflow
+1. Click on the hamburger menu on the top left and click on _Environments_.
+1. Click on the _New Environment_ button on the top right.
+1. Give the environment a name (`Production` is recommended), make sure that the environment is of type _Deployment_ and in the _Credentials_ section, you may input a name in the _Dataset_ field; this will add a prefix to the schemas, similarly to what we did in when setting up the development environment (`production` is the recommended prefix but any prefix will do, or you may leave it blank).
+1. Create a new job with the following settings:
+    * Give it any name; `dbt run` is recommended.
+    * Choose the environment you created in the previous step.
+    * Optionally, you may click on the _Generate docs?_ checkbox.
+    * In the _Commands_ section, add the command `dbt run`
+    * In the _Triggers_ section, inside the _Schedule_ tab, make sure that the _Run on schedule?_ checkbox is checked. Select _custom cron schedule_ and input the string `40 * * * *`; this will run the models every hour on the 40th minute (the DAG runs on the 30th minute, the 10 minute delay is to make sure that the DAG is run successfully).
+1. Save the job.
 
-## Create VM
+You may now trigger the job manually or you may wait until the scheduled trigger to run it. The first time you run it, 3 new datasets will be added to BigQuery following the same pattern as in the development environment.
 
-Follow [this gist](https://gist.github.com/ziritrion/3214aa570e15ae09bf72c4587cb9d686)
+## Creating a dashboard
 
-```sh
-gcloud compute instances create gh-airflow --zone=europe-west1-b --image-family=ubuntu-2004-lts --image-project=ubuntu-os-cloud --machine-type=e2-standard-4 --boot-disk-size=30GB
-```
+The dashboard used in this project was generated with [Google Data Studio](https://datastudio.google.com/) (GDS from now on). Dashboards in GDS are called _reports_. Reports grab data from _data sources_. We will need to generate 2 data sources and a report:
 
-Set up Airflow according to [these instructions](https://github.com/ziritrion/dataeng-zoomcamp/blob/main/notes/2_data_ingestion.md#setting-up-airflow-with-docker)
+1. Generate the data sources.
+    1. Click on the _Create_ button and choose _Data source_.
+    1. Click on the _BigQuery_ connector.
+    1. Choose your Google Cloud project, choose your _production core_ dataset and click on the `users` table. Click on the _Connect_ button at the top.
+    1. You may rename the data source by clicking on the name at the top left of the screen. The default name will be the name of the chosen table.
+    1. Click on the GDS icon on the top left to go back to the GDS front page and repeat all of the previous steps but choose the _production staging_ dataset and the `stg_commits` table.
+1. Generate the report.
+    1. Click on the _Create_ button and choose _Report_.
+    1. If the _Add data to report_ pop-up appears, choose the `My data sources` tab and choose one of the data sources. Click on the _Add to report_ button on the confirmation pop-up.
+    1. Once you're in the report page, click on the _Add data_ button on the top bar and choose the other data source you created.
+    1.  You may delete any default widgets created by GDS.
+1. Add the _Top Github Contributors_ widget.
+    1. Click on the _Add a chart_ button on the top bar and select _Table_.
+    1. On the left bar, in _Data source_ choose the dats source with the `users` table.
+    1. In _Dimension_, choose `actor_login` as the only dimension.
+    1. In _Metric_, choose `commit_count` as the only metric.
+    1. In _Sort_, choose `commit_count` and click on _Descending_.
+1. Add the _Commits per day_ widget.
+    1. Click on the _Add a chart_ button on the top bar and select _Time series chart_.
+    1. On the left bar, in _Data source_ choose the dats source with the `stg_commits` table.
+    1. In _Dimension_, choose `created_at` as the only dimension.
+    1. In _Metric_, choose `Record Count` as the only metric.
+
+You should now have a functioning dashboard.
 
