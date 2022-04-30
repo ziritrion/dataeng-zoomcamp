@@ -994,11 +994,68 @@ df_result = rdd \
 
 As you can see, manipulating RDDs to perform SQL-like queries is complex and time-consuming. Ever since Spark added support for dataframes and SQL, manipulating RDDs in this fashion has become obsolete, but since dataframes are built on top of RDDs, knowing how they work can help us understand how to make better use of Spark.
 
-## Spark RDD mapPartition
+## Spark RDD mapPartitions
 
 _[Video source](https://www.youtube.com/watch?v=k3uB2K99roI&list=PL3MmuxUbc_hJed7dXYoJw8DoCuVHhGEQb&index=58)_
 
+The `mapPartitions()` function behaves similarly to `map()` in how it receives an RDD as input and transforms it into another RDD with a function that we define but it transforms partitions rather than elements. In other words: `map()` creates a new RDD by transforming every single element, whereas `mapPartitions()` transforms every partition to create a new RDD.
 
+`mapPartitions()` is a convenient method for dealing with large datasets because it allows us to separate it into chunks that we can process more easily, which is handy for workflows such as Machine Learning.
+
+### Using `mapPartitions()` for ML
+
+Let's demonstrate this workflow with an example. Let's assume we want to predict taxi travel length with the green taxi dataset. We will use `VendorID`, `lpep_pickup_datetime`, `PULocationID`, `DOLocationID` and `trip_distance` as our features. We will now create an RDD with these columns:
+
+```python
+columns = ['VendorID', 'lpep_pickup_datetime', 'PULocationID', 'DOLocationID', 'trip_distance']
+
+duration_rdd = df_green \
+    .select(columns) \
+    .rdd
+```
+
+Let's now create the method that `mapPartitions()` will use to transform the partitions. This method will essentially call our prediction model on the partition that we're transforming:
+
+```python
+import pandas as pd
+
+def model_predict(df):
+    # fancy ML code goes here
+    (...)
+    # predictions is a Pandas dataframe with the field predicted_duration in it
+    return predictions
+
+def apply_model_in_batch(rows):
+    df = pd.DataFrame(rows, columns=columns)
+    predictions = model_predict(df)
+    df['predicted_duration'] = predictions
+
+    for row in df.itertuples():
+        yield row
+```
+* We're assuming that our model works with Pandas dataframes, so we need to import the library.
+* We are converting the input partition into a dataframe for the model.
+    * RDD's do not contain column info, so we use the `columns` param to name the columns because our model may need them.
+    * Pandas will crash if the dataframe is too large for memory! We're assuming that this is not the case here, but you may have to take this into account when dealing with large partitions. You can use the [itertools package](https://docs.python.org/3/library/itertools.html) for slicing the partitions before converting them to dataframes.
+* Our model will return another Pandas dataframe with a `predicted_duration` column containing the model predictions.
+* `df.itertuples()` is an iterable that returns a tuple containing all the values in a single row, for all rows. Thus, `row` will contain a tuple with all the values for a single row.
+* `yield` is a Python keyword that behaves similarly to `return` but returns a ***generator object*** instead of a value. This means that a function that uses `yield` can be iterated on. Spark makes use of the generator object in `mapPartitions()` to build the output RDD.
+  * You can learn more about the `yield` keyword [in this link](https://realpython.com/introduction-to-python-generators/).
+
+With our defined fuction, we are now ready to use `mapPartitions()` and run our prediction model on our full RDD:
+
+```python
+df_predicts = duration_rdd \
+    .mapPartitions(apply_model_in_batch)\
+    .toDF() \
+    .drop('Index')
+
+df_predicts.select('predicted_duration').show()
+```
+* We're not specifying the schema when creating the dataframe, so it may take some time to compute.
+* We drop the `Index` field because it was created by Spark and it is not needed.
+
+As a final thought, you may have noticed that the `apply_model_in_batch()` method does NOT operate on single elements, but rather it takes the whole partition and does something with it (in our case, calling a ML model). If you need to operate on individual elements then you're better off with `map()`.
 
 _[Back to the top](#)_
 
