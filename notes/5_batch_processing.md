@@ -1153,6 +1153,119 @@ _[Back to the top](#)_
 
 ## Creating a Local Spark Cluster
 
+_[Video source](https://www.youtube.com/watch?v=HXBwSlXo5IA&list=PL3MmuxUbc_hJed7dXYoJw8DoCuVHhGEQb&index=62)_
+
+### Spark standalone master and workers
+
+[At the beginning of this lesson](#creating-a-spark-session) we saw how to create a Spark session from a notebook, like so:
+
+```python
+spark = SparkSession.builder \
+    .master("local[*]") \
+    .appName('test') \
+    .getOrCreate()
+```
+
+This code will stard a local cluster, but once the notebook kernel is shut down, the cluster will disappear.
+
+We will now see how to crate a Spark cluster in [Standalone Mode](https://spark.apache.org/docs/latest/spark-standalone.html) so that the cluster can remain running even after we stop running our notebooks.
+
+Simply go to your Spark install directory from a terminal and run the following command:
+
+```bash
+./sbin/start-master.sh
+```
+
+You should now be able to open the main Spark dashboard by browsing to `localhost:8080` (remember to forward the port if you're running it on a virtual machine). At the very top of the dashboard the URL for the dashboard should appear; copy it and use it in your session code like so:
+
+```python
+spark = SparkSession.builder \
+    .master("spark://<URL>:7077") \
+    .appName('test') \
+    .getOrCreate()
+```
+* Note that we used the HTTP port 8080 for browsing to the dashboard but we use the Spark port 7077 for connecting our code to the cluster.
+* Using `localhost` as a stand-in for the URL may not work.
+
+You may note that in the Spark dashboard there aren't any _workers_ listed. The actual Spark jobs are run from within ***workers*** (or _slaves_ in older Spark versions), which we need to create and set up.
+
+Similarly to how we created the Spark master, we can run a worker from the command line by running the following command from the Spark install directory:
+
+```bash
+./sbin/start-worker.sh <master-spark-URL>
+```
+* In older Spark versions, the script to run is `start-slave.sh` .
+
+Once you've run the command, you should see a worker in the Spark dashboard.
+
+Note that a worker may not be able to run multiple jobs simultaneously. If you're running separate notebooks and connecting to the same Spark worker, you can check in the Spark dashboard how many Running Applications exist. Since we haven't configured the workers, any jobs will take as many resources as there are available for the job.
+
+### Parametrizing our scripts for Spark
+
+So far we've hard-coded many of the values such as folders and dates in our code, but with a little bit of tweaking we can make our code so that it can receive parameters from Spark and make our code much more reusable and versatile.
+
+We will use the [argparse library](https://docs.python.org/3/library/argparse.html) for parsing parameters. Convert a notebook to a script with `nbconvert`, manually modify it or create it from scratch and add the following:
+
+```python
+import argparse
+
+import pyspark
+from pyspark.sql import SparkSession
+from pyspark.sql import functions as F
+
+parser.add_argument('--input_green', required=True)
+parser.add_argument('--input_yellow', required=True)
+parser.add_argument('--output', required=True)
+
+input_green = args.input_green
+input_yellow = args.input_yellow
+output = args.output
+```
+
+We can now modify previous lines using the 3 parameters we've created. For example:
+
+```python
+df_green = spark.read.parquet(input_green)
+```
+
+Once we've finished our script, we simply call it from a terminal line with the parameters we need:
+
+```bash
+python my_script.py \
+    --input_green=data/pq/green/2020/*/ \
+    --input_yellow=data/pq/yellow/2020/*/ \
+    --output=data/report-2020
+```
+
+### Submitting Spark jobs with Spark submit
+
+However, we still haven't covered any Spark specific parameters; things like the the cluster URL when having multiple available clusters or how many workers to use for the job. Instead of specifying these parameters when setting up the session inside the script, we can use an external script called [Spark submit](https://spark.apache.org/docs/latest/submitting-applications.html).
+
+The basic usage is as follows:
+
+```bash
+spark-submit \
+    --master="spark://<URL>" \
+    my_script.py \
+        --input_green=data/pq/green/2020/*/ \
+        --input_yellow=data/pq/yellow/2020/*/ \
+        --output=data/report-2020
+```
+
+And the Spark session code in the script is simplified like so:
+
+```python
+spark = SparkSession.builder \
+    .appName('test') \
+    .getOrCreate()
+```
+
+You may find more sophisticated uses of `spark-submit` in the [official documentation](https://spark.apache.org/docs/latest/submitting-applications.html).
+
+> You may download a finished script [from this link](https://github.com/DataTalksClub/data-engineering-zoomcamp/blob/main/week_5_batch_processing/code/06_spark_sql.py)
+
+After you're done running Spark in standalone mode, you will need to manually shut it down. Simply run the `./sbin/stop-worker.sh` (`./sbin/stop-slave.sh` in older Spark versions) and ``./sbin/stop-master.sh` scripts to shut down Spark.
+
 _[Back to the top](#)_
 
 ## Setting up a Dataproc Cluster
