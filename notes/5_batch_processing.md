@@ -1270,6 +1270,72 @@ _[Back to the top](#)_
 
 ## Setting up a Dataproc Cluster
 
+### Creating the cluster
+
+_[Video source](https://www.youtube.com/watch?v=osAiAYahvh8&list=PL3MmuxUbc_hJed7dXYoJw8DoCuVHhGEQb&index=61)_
+
+[Dataproc](https://cloud.google.com/dataproc) is Google's cloud-managed service for running Spark and other data processing tools such as Flink, Presto, etc.
+
+You may access Dataproc from the GCP dashboard and typing `dataproc` on the search bar. The first time you access it you will have to enable the API.
+
+In the images below you may find some example values for creating a simple cluster. Give it a name of your choosing and choose the same region as your bucket.
+
+![creating a cluster](images/05_01.png)
+
+We would normally choose a `standard` cluster, but you may choose `single node` if you just want to experiment and not run any jobs.
+
+![creating a cluster](images/05_02.png)
+
+Optionally, you may install additional components but we won't be covering them in this lesson.
+
+![creating a cluster](images/05_03.png)
+
+You may leave all other optional settings with their default values. After you click on `Create`, it will take a few seconds to create the cluster. You may notice an extra VM instance under VMs; that's the Spark instance.
+
+### Running a job with the web UI
+
+In a [previous section](#configuring-spark-with-the-gcs-connector) we saw how to connect Spark to our bucket in GCP. However, in Dataproc we don't need to specify this connection because it's already pre-comfigured for us. We will also submit jobs using a menu, following similar principles to what we saw in the previous section.
+
+In Dataproc's _Clusters_ page, choose your cluster and un the _Cluster details_ page, click on `Submit job`. Under _Job type_ choose `PySpark`, then in _Main Python file_ write the path to your script (you may upload the script to your bucket and then copy the URL).
+
+![setting up a job](images/05_04.png)
+
+Make sure that your script does not specify the `master` cluster! Your script should take the connection details from Dataproc; make sure it looks something like this:
+
+```python
+spark = SparkSession.builder \
+    .appName('test') \
+    .getOrCreate()
+```
+
+You may use [this script](https://github.com/DataTalksClub/data-engineering-zoomcamp/blob/main/week_5_batch_processing/code/06_spark_sql.py) for testing.
+
+We also need to specify arguments, in a similar fashion to what we saw [in the previous section](#parametrizing-our-scripts-for-spark), but using the URL's for our folders rather than the local paths:
+
+![setting up a job](images/05_05.png)
+
+Now press `Submit`. Sadly there is no easy way to access the Spark dashboard but you can check the status of the job from the `Job details` page.
+
+### Running a job with the gcloud SDK
+
+Besides the web UI, there are additional ways to run a job, listed [in this link](https://cloud.google.com/dataproc/docs/guides/submit-job). We will focus on the gcloud SDK now.
+
+Before you can submit jobs with the SDK, you will need to grant permissions to the Service Account we've been using so far. Go to _IAM & Admin_ and edit your Service Account so that the `Dataproc Administrator` role is added to it.
+
+We can now submit a job from the command line, like this:
+
+```bash
+gcloud dataproc jobs submit pyspark \
+    --cluster=<your-cluster-name> \
+    --region=europe-west6 \
+    gs://<url-of-your-script> \
+    -- \
+        --param1=<your-param-value> \
+        --param2=<your-param-value>
+```
+
+You may find more details on how to run jobs [in the official docs](https://cloud.google.com/dataproc/docs/guides/submit-job).
+
 _[Back to the top](#)_
 
 _[Back to the top](#)_
