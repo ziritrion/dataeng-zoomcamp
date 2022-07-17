@@ -78,7 +78,7 @@ Data Lakes came into existence because as companies started to realize the impor
 
 ## ETL vs ELT
 
-When ingesting data, DWs use the ***Export, Transform and Load*** (ETL) model whereas DLs use ***Export, Load and Transform*** (ELT).
+When ingesting data, DWs use the ***Extract, Transform and Load*** (ETL) model whereas DLs use ***Extract, Load and Transform*** (ELT).
 
 The main difference between them is the order of steps. In DWs, ETL (Schema on Write) means the data is _transformed_ (preprocessed, etc) before arriving to its final destination, whereas in DLs, ELT (Schema on read) the data is directly stored without any transformations and any schemas are derived when reading the data from the DL.
 
