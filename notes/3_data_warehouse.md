@@ -246,7 +246,7 @@ As mentioned before, you may combine both partitioning and clustering in a table
 |---|---|
 | Cost benefit unknown. BQ cannot estimate the reduction in cost before running a query. | Cost known upfront. BQ can estimate the amount of data to be processed before running a query. |
 | High granularity. Multiple criteria can be used to sort the table. | Low granularity. Only a single column can be used to partition the table. |
-| Clusters are "fixed in place". | Partitions can be added, deleted, modified or even moved between storage options. |
+| BigQuery supports changing an existing non-clustered table to a clustered table and vice versa. You can also update the set of clustered columns of a clustered table. | Partitions can be added, deleted, modified or even moved between storage options. |
 | Benefits from queries that commonly use filters or aggregation against multiple particular columns. | Benefits when you filter or aggregate on a single column. |
 | Unlimited amount of clusters; useful when the cardinality of the number of values in a column or group of columns is large. | Limited to 4000 partitions; cannot be used in columns with larger cardinality. |
 
