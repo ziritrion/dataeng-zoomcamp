@@ -248,7 +248,7 @@ As mentioned before, you may combine both partitioning and clustering in a table
 | High granularity. Multiple criteria can be used to sort the table. | Low granularity. Only a single column can be used to partition the table. |
 | Clusters are "fixed in place". | Partitions can be added, deleted, modified or even moved between storage options. |
 | Benefits from queries that commonly use filters or aggregation against multiple particular columns. | Benefits when you filter or aggregate on a single column. |
-| Unlimited amount of clusters; useful when the cardinality of the number of values in a column or group of columns is large. | Limited to 4000 partitions; cannot be used in columns with larger cardinality. |
+| Up to four clustering columns; useful when the cardinality of the number of values in a column or group of columns is large. | Limited to 4000 partitions; cannot be used in columns with larger cardinality. |
 
 You may choose clustering over partitioning when partitioning results in a small amount of data per partition, when partitioning would result in over 4000 partitions or if your mutation operations modify the majority of partitions in the table frequently (for example, writing to the table every few minutes and writing to most of the partitions each time rather than just a handful).
 
